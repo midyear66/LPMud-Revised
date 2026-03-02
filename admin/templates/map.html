@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Map — LPmud Admin{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom: 0.75rem;">
+  <h1>World Map</h1>
+  <p>LPmud 2.4.5 — interactive room map (zoom and drag)</p>
+</div>
+
+{% if map_exists %}
+<div class="map-container" id="map">
+  <div class="map-controls">
+    <button id="reset-view" class="btn btn-sm" title="Reset view">Reset View</button>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <p>No world map found. Generate one from the <a href="{{ url_for('scheduler.scheduler_view') }}">Scheduler</a> page.</p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if map_exists %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+{% endif %}
+{% endblock %}

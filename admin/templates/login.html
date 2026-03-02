@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Login — LPmud Admin{% endblock %}
+
+{% block body_class %}login-page{% endblock %}
+
+{% block body %}
+<div class="login-container">
+  <div class="login-card">
+    <div class="login-header">
+      <h1>LPmud Admin</h1>
+      <p>Enter the admin password to continue.</p>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <form method="post" class="login-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password"
+               autofocus required placeholder="Admin password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Log In</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Backups — LPmud Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Backups</h1>
+  <p>Create, download, restore, and delete backup archives</p>
+</div>
+
+<div class="card">
+  <div class="card-header">Create Backup</div>
+  <form method="post" action="{{ url_for('backups.create_backup') }}" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="target">Target</label>
+      <select id="target" name="target" style="width: auto;">
+        {% for key, info in targets.items() %}
+        <option value="{{ key }}">{{ info.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="label">Label <span style="opacity:0.5">(optional)</span></label>
+      <input type="text" id="label" name="label" placeholder="e.g. before-update"
+             maxlength="50" pattern="[a-zA-Z0-9_-]*" style="width: 200px;">
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary">Create Backup</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">Backup Archives</div>
+  {% if backups %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Filename</th>
+          <th>Target</th>
+          <th>Date</th>
+          <th>Size</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in backups %}
+        <tr>
+          <td>{{ b.name }}</td>
+          <td><span class="badge badge-info">{{ b.target }}</span></td>
+          <td>{{ b.time }}</td>
+          <td>{{ b.size }}</td>
+          <td>
+            <div class="btn-group">
+              <a href="{{ url_for('backups.download_backup', filename=b.name) }}"
+                 class="btn btn-sm">Download</a>
+              <form method="post" action="{{ url_for('backups.restore_backup') }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Restore {{ b.name }}? This will overwrite current files.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="filename" value="{{ b.name }}">
+                <button type="submit" class="btn btn-sm">Restore</button>
+              </form>
+              <form method="post" action="{{ url_for('backups.delete_backup') }}"
+                    style="display:inline"
+                    onsubmit="return confirm('Delete {{ b.name }}? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="filename" value="{{ b.name }}">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No backups yet. Create one above.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — LPmud Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p>LPmud 2.4.5 server overview</p>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="card-header">World Map</div>
+    {% if map_info.exists %}
+    <div class="stat-value">Available</div>
+    <div class="stat-label">Last generated: {{ map_info.time }} ({{ map_info.size }})</div>
+    {% else %}
+    <div class="stat-value" style="opacity:0.4">Not generated</div>
+    <div class="stat-label">Run the map generator from the Scheduler page</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header">Rooms</div>
+    <div class="stat-value">{{ room_count }}</div>
+    <div class="stat-label">Room files in mudlib/room/</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Backups</div>
+    <div class="stat-value">{{ backup_info.count }}</div>
+    <div class="stat-label">
+      Total size: {{ backup_info.total_size }}
+      {% if backup_info.latest %}
+      <br>Latest: {{ backup_info.latest.name }}
+      <br>{{ backup_info.latest.time }} ({{ backup_info.latest.size }})
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Scheduler</div>
+    {% if scheduler_info.active %}
+    <div class="stat-value"><span class="badge badge-success">Active</span></div>
+    <div class="stat-label">
+      {{ scheduler_info.job_count }} job{{ 's' if scheduler_info.job_count != 1 }}
+      <br>Next run: {{ scheduler_info.next_run }}
+    </div>
+    {% else %}
+    <div class="stat-value"><span class="badge badge-warning">No schedule</span></div>
+    <div class="stat-label">Set a map regeneration schedule on the Scheduler page</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+  <div class="card-header">Quick Actions</div>
+  <div class="btn-group">
+    <a href="{{ url_for('map.map_view') }}" class="btn">View Map</a>
+    <a href="{{ url_for('backups.backups_list') }}" class="btn">Manage Backups</a>
+    <a href="{{ url_for('scheduler.scheduler_view') }}" class="btn">Scheduler</a>
+  </div>
+</div>
+{% endblock %}
