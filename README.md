@@ -140,6 +140,16 @@ python3 scripts/generate-map.py
 
 Output is saved to `docs/world-map.png`, `docs/room-connectivity.txt`, and `docs/world-map.txt`. When rooms are added or modified in the mudlib, re-run the script to update the map automatically.
 
+**Automated regeneration:**
+
+A wrapper script `scripts/regen-map.sh` only regenerates the map when room files have changed. Add it to cron for nightly updates:
+
+```bash
+crontab -e
+# Add this line:
+0 2 * * * /path/to/lpmud/scripts/regen-map.sh >> /tmp/map-gen.log 2>&1
+```
+
 ## Design Decisions
 
 - **ldmud over FluffOS**: FluffOS (MudOS lineage) was considered but rejected — it has no compat mode and would require a full mudlib rewrite to work with 2.4.5. ldmud is the direct descendant of the original LPmud driver and supports compat mode natively.
