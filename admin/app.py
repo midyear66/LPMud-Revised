@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from flask import Flask, session, redirect, url_for
+from flask import Flask, session, redirect, url_for, flash, render_template
 from flask_wtf.csrf import CSRFProtect
 
 from config import Config
@@ -27,12 +27,14 @@ def create_app():
     from backups import backups_bp
     from scheduler import scheduler_bp, init_scheduler
     from mapviewer import map_bp
+    from server import server_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(backups_bp)
     app.register_blueprint(scheduler_bp)
     app.register_blueprint(map_bp)
+    app.register_blueprint(server_bp)
 
     # Initialize APScheduler
     init_scheduler(app)
@@ -41,6 +43,12 @@ def create_app():
     @app.route("/")
     def index():
         return redirect(url_for("dashboard.dashboard"))
+
+    # Handle oversized uploads
+    @app.errorhandler(413)
+    def request_entity_too_large(error):
+        flash("File too large. Maximum upload size is 500 MB.", "error")
+        return redirect(url_for("backups.backups_list"))
 
     # Security headers on every response
     @app.after_request

@@ -83,6 +83,15 @@ def _get_scheduler_info():
         return {"active": False}
 
 
+def _get_server_info() -> dict:
+    """Get game server status via Docker."""
+    try:
+        from server import get_server_status
+        return get_server_status()
+    except Exception:
+        return {"available": False, "status": "unavailable"}
+
+
 @dashboard_bp.route("/dashboard")
 @login_required
 def dashboard():
@@ -92,5 +101,6 @@ def dashboard():
         "map_info": _get_map_info(cfg["DOCS_PATH"]),
         "room_count": _get_room_count(cfg["MUDLIB_PATH"]),
         "scheduler_info": _get_scheduler_info(),
+        "server_info": _get_server_info(),
     }
     return render_template("dashboard.html", **context)

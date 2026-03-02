@@ -17,6 +17,12 @@ class Config:
     BACKUP_PATH = os.environ.get("BACKUP_PATH", "/backups")
     ADMIN_DATA_PATH = os.environ.get("ADMIN_DATA_PATH", "/admin-data")
 
+    # Upload limit (500 MB)
+    MAX_CONTENT_LENGTH = 500 * 1024 * 1024
+
+    # Docker container name for the game server
+    LPMUD_CONTAINER_NAME = os.environ.get("LPMUD_CONTAINER_NAME", "lpmud-server")
+
     # Session
     SESSION_TIMEOUT_MINUTES = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "30"))
     PERMANENT_SESSION_LIFETIME = SESSION_TIMEOUT_MINUTES * 60
