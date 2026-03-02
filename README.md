@@ -14,10 +14,11 @@ This project runs the classic **2.4.5 mudlib** — the most widely used LPmud mu
 - **Base image**: Debian bookworm-slim
 - **Mudlib**: LPmud 2.4.5 (ldmud's pre-ported [lp-245](https://github.com/ldmud/ldmud/tree/master/mud/lp-245))
 - **Compat mode**: Enabled (`--compat`) for 2.4.5 mudlib compatibility
-- **Port**: 4000 (telnet)
+- **Port**: 4000 (telnet), 8080 (admin web interface)
+- **Admin dashboard**: Flask + Gunicorn, runs as a separate Docker service
 - **Mudlib editing**: Mounted as a Docker volume for live editing during development
 - **Configuration**: `config/ldmud.conf` in ldmud `--args` format (one flag per line)
-- **Security**: Runs as non-root `mud` user inside the container
+- **Security**: Both containers run as non-root users
 
 ## Prerequisites
 
@@ -30,14 +31,20 @@ This project runs the classic **2.4.5 mudlib** — the most widely used LPmud mu
 git clone git@github.com:midyear66/LPMud-Revised.git
 cd LPMud-Revised
 
-# Build the container (compiles ldmud from source, bundles the mudlib)
+# Set up environment variables (required for admin interface)
+cp docker/.env.example docker/.env
+# Edit docker/.env with your own ADMIN_PASSWORD and SECRET_KEY
+
+# Build the containers (compiles ldmud from source, bundles the mudlib)
 docker compose -f docker/docker-compose.yml build
 
-# Start the MUD server
+# Start all services (MUD server + admin dashboard)
 docker compose -f docker/docker-compose.yml up
 
-# Connect via telnet (default port 4000)
+# Connect to the MUD via telnet (port 4000)
 telnet localhost 4000
+
+# Access the admin dashboard at http://localhost:8080
 ```
 
 Create a character at the login prompt. To explore the world, try `look`, `north`, `south`, `east`, `west`, `inventory`, and `say <message>`.
@@ -46,11 +53,22 @@ Create a character at the login prompt. To explore the world, try `look`, `north
 
 ```
 lpmud/
+├── admin/                  # Flask admin web interface
+│   ├── Dockerfile          #   Python 3.12-slim, Gunicorn
+│   ├── app.py              #   App factory, blueprints, security headers
+│   ├── auth.py             #   Login, session mgmt, rate limiting
+│   ├── dashboard.py        #   Status overview page
+│   ├── backups.py          #   Backup create/list/download/restore/delete
+│   ├── scheduler.py        #   APScheduler cron UI for map regeneration
+│   ├── mapviewer.py        #   Interactive Leaflet map viewer
+│   ├── templates/          #   Jinja2 templates (base, login, dashboard, etc.)
+│   └── static/             #   CSS (light/dark theme), JS (theme toggle, map)
 ├── config/                 # ldmud runtime configuration
 │   └── ldmud.conf          #   --args format config file
 ├── docker/                 # Docker build files
 │   ├── Dockerfile          #   Multi-stage build (compile ldmud + runtime)
-│   └── docker-compose.yml  #   Service definition, ports, volumes
+│   ├── docker-compose.yml  #   Service definition, ports, volumes
+│   └── .env.example        #   Template for required environment variables
 ├── docs/                   # Project documentation and maps
 │   ├── world-map.png       #   Visual world map
 │   ├── world-map.txt       #   ASCII world map
@@ -149,6 +167,48 @@ crontab -e
 # Add this line:
 0 2 * * * /path/to/lpmud/scripts/regen-map.sh >> /tmp/map-gen.log 2>&1
 ```
+
+## Admin Web Interface
+
+A Flask-based admin dashboard runs as a separate Docker service on **port 8080**, providing server management without shell access.
+
+### Setup
+
+```bash
+# Create .env from the template
+cp docker/.env.example docker/.env
+
+# Edit docker/.env — set a real password and secret key:
+#   ADMIN_PASSWORD=your-password-here
+#   SECRET_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+
+# Build and start
+docker compose -f docker/docker-compose.yml build admin
+docker compose -f docker/docker-compose.yml up -d admin
+
+# Visit http://localhost:8080
+```
+
+### Features
+
+| Page | Description |
+|------|-------------|
+| **Dashboard** | Server overview — room count, backup status, scheduler status |
+| **Map** | Interactive world map viewer (Leaflet.js with zoom/pan/drag) |
+| **Backups** | Create, download, restore, and delete tar.gz backups of mudlib, saves, or logs |
+| **Scheduler** | Set a daily schedule for automatic map regeneration, or run it on demand |
+
+### Security
+
+- Single admin password via `ADMIN_PASSWORD` env var (timing-safe comparison)
+- Session-based auth with 30-minute inactivity timeout
+- Login rate limiting (5 attempts/minute, then 60-second lockout)
+- CSRF protection on all forms (Flask-WTF)
+- Security headers: CSP, X-Frame-Options, X-Content-Type-Options
+- Mudlib mounted read-only — admin can back up but not modify game files
+- Container runs as non-root with `no-new-privileges`
+
+> **Production**: Bind to localhost only (`127.0.0.1:8080:8080` in docker-compose.yml) and put a reverse proxy (nginx/Caddy) with TLS in front.
 
 ## Design Decisions
 
