@@ -2,10 +2,14 @@
 
 import os
 import sys
+import time
 
 
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "")
+
+    # Cache-busting version — changes on every app start
+    APP_VERSION = str(int(time.time()))
     ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 
     # Paths inside the Docker container
