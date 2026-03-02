@@ -1,0 +1,19 @@
+services:
+  lpmud:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: lpmud-server
+    ports:
+      - "4000:4000"
+    volumes:
+      # Mount mudlib for live editing (optional — remove for production)
+      - ../mudlib:/mud/lib
+      # Persist logs and save data
+      - lpmud-logs:/mud/log
+      - lpmud-save:/mud/save
+    restart: unless-stopped
+
+volumes:
+  lpmud-logs:
+  lpmud-save:

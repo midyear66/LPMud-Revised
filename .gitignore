@@ -1,0 +1,66 @@
+# =========================
+# Player data (passwords, emails, IPs)
+# =========================
+mudlib/players/
+
+# =========================
+# Runtime logs (may contain player data)
+# =========================
+mudlib/log/
+
+# =========================
+# Secrets and credentials
+# =========================
+.env
+*.pem
+*.key
+*.cert
+*.p12
+
+# =========================
+# Claude local config
+# =========================
+.claude/
+
+# =========================
+# Build artifacts
+# =========================
+*.o
+*.a
+*.so
+*.dylib
+
+# =========================
+# Archives (large files)
+# =========================
+*.tar.gz
+
+# =========================
+# Docker runtime state
+# =========================
+mud/save/
+mud/log/
+mud/tmp/
+
+# =========================
+# OS metadata
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Editor / IDE files
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# =========================
+# Python cache
+# =========================
+__pycache__/
+*.pyc

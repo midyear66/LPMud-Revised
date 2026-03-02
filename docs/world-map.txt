@@ -1,0 +1,219 @@
+===============================================================================
+                        LPmud 2.4.5 World Map
+                        ~200+ rooms total
+===============================================================================
+
+
+=== OVERWORLD (North to South) ===
+
+
+                                    mount_top --- mount_top2
+                                        |          (Plateau)
+                                     ravine
+                                        |
+                MINE ENTRANCE ----- mount_pass
+                (see below)             |
+                                     plane11 ---- plane13
+                                     /    \          |
+                                plane12    plane6 - plane8
+                                  |        / | \      |
+                               deep_      7  |  3 -- ruin -- plane9
+                              forest1    /   |    \     |
+                                      big   plane2  plane3
+                                     tree   / | \
+                                      |  pl1  4   5
+                                giant_path  |
+                                      |  clearing
+                                giant_lair  / \
+                                      |  forest1  plane1
+                                giant_conf  |
+                                          wild1
+                          ORC VALLEY        |
+                        orc_treasure      hump (bridge)
+                             |              |
+                          fortress     VILLAGE GREEN
+                             |         (see detail)
+                          orc_vall
+                             |
+                           slope
+                             |
+                          forest2
+                             |
+                         clearing ---- forest1 ---- wild1 ---- hump
+                             |
+                          forest3
+                             |
+                          forest4 --- forest6
+                         /      \
+                     forest5     forest7 --- forest10
+                        |                       |
+                     forest8 --- forest9 --- forest10
+                        |           |
+                                 forest11 --- forest12
+                                                 |
+                                           === SOUTH ===
+                                        (Crescent Lake Region)
+
+
+=== VILLAGE DETAIL ===
+
+                                                        inn
+                                                         |
+                                                     eastroad5
+                                                         |
+                                                     eastroad4
+                                                         |
+                              sunalley2 -- sunalley1 -- eastroad3
+                                                         |
+                                                     eastroad2
+                                                         |
+                                                     eastroad1
+                                                         |
+       attic                                         vill_shore -- jetty - shore2 - jetty2 - sea
+         |                                           /       \                                 |
+  [elevator]                                      crop     vill_road2 --- station (down)   sea_bottom
+         |                                                  /    |    \
+      wiz_hall -- quest_room                            shop   adv_   vill_road1
+                                                        |     guild      /    \
+                                                     storage  / \     yard   narr_alley
+                                                           inner    |      /    |    \
+                                                          inner2   pub2  bank  post   well
+                                                                          |           (down)
+                                                                       bankroom    === MAZE ===
+
+       church (floor 2 of elevator)
+         |
+      VILLAGE GREEN
+       /          \
+     hump      vill_track -- vill_road1
+   (to west)
+
+
+=== UNDERGROUND: WELL, MAZE & TRAPS ===
+
+                          narr_alley
+                               |
+                              well
+                             /    \
+                        maze1    door_trap -- after_trap
+                          |        (lever)
+                        maze2
+                          |
+                        maze3       (maze has randomized exits;
+                          |         wrong direction sends you back)
+                        maze4
+                          |
+                        maze5 (end)
+
+
+=== MINES (dark tunnels, entered from mount_pass) ===
+
+    mount_pass
+        |
+     tunnel (entrance)
+        |
+     tunnel2
+        |
+     tunnel3 ---- tunnel4 ---- tunnel5 ---- tunnel_room
+        |                                    (dead end)
+     tunnel8  (shaft down, need rope)
+        |
+     tunnel9
+     /      \
+  tunnel10  tunnel14
+     |          |
+  tunnel11  tunnel15
+     |          |
+  tunnel12  tunnel16 (dwarf guards passage)
+     |          |
+  tunnel13  tunnel17 ---- tunnel18
+  (dead end)    |          (dead end)
+             tunnel19
+                |
+  tunnel20 -- tunnel21 -- tunnel22 -- tunnel23 -- tunnel24
+  (dead end)                                         |
+                                                  tunnel25
+                                                     |
+                                     tunnel27 -- tunnel26 -- tunnel28 -- tunnel29
+                                    (dead end)                          ** DRAGON **
+
+
+=== CRESCENT LAKE REGION (south of forest12) ===
+
+  Entry from forest12 -> sforst1
+
+  The region has three concentric layers:
+  1. Outer: Dimly Lit Forest (sforst1-49) - dense woods
+  2. Middle: Crescent Lake Shore (sshore1-30) - circular lakeshore
+  3. Inner: Isle of the Magi (sislnd1-18) - island in the lake
+
+                  sforst5 -- sforst1 (from forest12)
+                    |          |    \
+                  sforst6 -- sforst2  sforst9
+                    |          |        |
+                  sforst7 -- sforst3  sforst10
+                    |          |        |
+                  sforst8 -- sforst4  sforst11
+                   /    \       |       |
+               sshore30 sshore1 |     sforst12
+                          |     |       |
+                       sshore2  |     sforst13        sforst24
+                          |  sforst9    |               |
+                       sshore3  |     sforst14       sforst25
+                          |     |       |               |
+                       sshore4  |     sforst15       sforst29
+                          |     |       |               |
+                       sshore5  |   sforst16 ------- sforst30
+                          |     |     |    \            |
+                       sshore6  | sforst19  sforst17  sshore19
+                          |     |   |  \       |
+                       sshore7--+ sforst20  sforst18
+                             \     |
+                           sshore8-sshore9--sshore10-- ... --sshore13--sshore14
+                                                                         |
+                                                                      sshore15
+                                                                         |
+  SHORE continues clockwise:                                          sshore16
+  sshore14-15-16-17-18-19-20-21-22-23-24-25-26-27-28-29-30-1           |
+  (forming a rough circle around Crescent Lake)                      sshore17
+                                                                        |
+                                                                     sshore18
+
+  At sshore26, cross to the Isle:    sshore26 --SE--> sislnd1
+
+
+  === ISLE OF THE MAGI ===
+
+                         sislnd10 (Focus Point)
+                            |
+               sislnd11 -- sislnd9
+                |             |
+  sislnd1 -- sislnd12     sislnd17 (well -> lair below)
+    |    \      |             |
+  sislnd2  sislnd13      sislnd8
+    |         |              |
+  sislnd3  sislnd14      sislnd7
+    |         |              |
+  sislnd4  sislnd15      sislnd6
+    |         |              |
+  sislnd5 -- sislnd18 -- sislnd16
+              (Arcanarton's Tower Ruins - center/summit)
+
+
+=== DEATH SEQUENCE ===
+
+  When you die -> death_room (Death reads your soul) -> returned to church
+
+
+=== SPECIAL ROOMS ===
+
+  void       - Fallback room (auto-transfers to church)
+  prison     - No exits (punishment room)
+  test/rum2  - Debug rooms (connected by door)
+
+
+===============================================================================
+  Key:  --- horizontal connection    | vertical connection
+        ** DRAGON ** = boss encounter
+        Rooms in () are notes, not room names
+===============================================================================
