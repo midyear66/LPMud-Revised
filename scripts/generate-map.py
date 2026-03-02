@@ -1,13 +1,25 @@
 #!/usr/bin/env python3
 """Generate a graphical PNG world map for LPmud 2.4.5.
 
-Reads the known room layout and draws all ~200 rooms as colored boxes
-with connection lines, organized by region on a single large PNG.
+Auto-discovers rooms by parsing mudlib/room/ .c files, builds a graph
+with NetworkX, lays out rooms using a region-seeded spring layout, and
+renders the map as a PNG with Pillow.
+
+Also generates docs/room-connectivity.txt and docs/world-map.txt.
+
+Usage:
+    python3 scripts/generate-map.py [--mudlib path] [--output path]
 """
 
-from PIL import Image, ImageDraw, ImageFont
+import argparse
 import math
 import os
+import re
+import sys
+from collections import defaultdict
+
+import networkx as nx
+from PIL import Image, ImageDraw, ImageFont
 
 # ---------------------------------------------------------------------------
 # Canvas
@@ -38,9 +50,385 @@ PALETTE = {
     "elevator":     ((165, 165, 210), (120, 120, 165),  (30, 30, 60)),
 }
 
+# Files in mudlib/room/ that are NOT actual rooms (base classes, templates, objects)
+SKIP_FILES = {
+    "room.c",         # base room class
+    "def_castle.c",   # castle facade template
+    "port_castle.c",  # portable castle object
+    "doorway.c",      # configurable doorway template
+    "death.c",        # monster object, not a room
+    "death_mark.c",   # portable object, not a room
+}
+
+# ---------------------------------------------------------------------------
+# Region classification
+# ---------------------------------------------------------------------------
+REGION_RULES = [
+    # Subdirectory-based (checked first)
+    (r"^south/sforst",  "south_forest"),
+    (r"^south/sshore",  "shore"),
+    (r"^south/sislnd",  "island"),
+    (r"^south/lair",    "island"),
+    (r"^mine/",         "mines"),
+    (r"^maze1/",        "underground"),
+    (r"^sub/",          "underground"),
+    (r"^death/",        "special"),
+    # Top-level name patterns
+    (r"^mount_",        "mountains"),
+    (r"^ravine$",       "mountains"),
+    (r"^plane\d",       "plains"),
+    (r"^ruin$",         "plains"),
+    (r"^deep_forest",   "deep_forest"),
+    (r"^big_tree$",     "giants"),
+    (r"^giant_",        "giants"),
+    (r"^orc_",          "orcs"),
+    (r"^fortress$",     "orcs"),
+    (r"^forest[0-9]",   "forest"),
+    (r"^forest1[0-2]$", "deep_forest"),
+    (r"^clearing$",     "forest"),
+    (r"^wild",          "forest"),
+    (r"^slope$",        "forest"),
+    (r"^hump$",         "forest"),
+    (r"^church$",       "village"),
+    (r"^vill_",         "village"),
+    (r"^yard$",         "village"),
+    (r"^pub",           "village"),
+    (r"^narr_alley$",   "village"),
+    (r"^bank",          "village"),
+    (r"^post$",         "village"),
+    (r"^shop$",         "village"),
+    (r"^storage$",      "village"),
+    (r"^store$",        "village"),
+    (r"^adv_",          "village"),
+    (r"^crop$",         "village"),
+    (r"^eastroad",      "east_road"),
+    (r"^inn$",          "east_road"),
+    (r"^sunalley",      "east_road"),
+    (r"^jetty",         "sea"),
+    (r"^sea",           "sea"),
+    (r"^elevator$",     "elevator"),
+    (r"^attic$",        "elevator"),
+    (r"^wiz_hall$",     "elevator"),
+    (r"^quest_room$",   "elevator"),
+    (r"^well$",         "underground"),
+    (r"^station$",      "underground"),
+    (r"^void$",         "special"),
+    (r"^prison$",       "special"),
+    (r"^test$",         "special"),
+    (r"^rum2$",         "special"),
+]
+
+
+def classify_region(room_id):
+    """Map a room ID to a region key."""
+    for pattern, region in REGION_RULES:
+        if re.match(pattern, room_id):
+            # Override: forest3-forest12 are deep_forest
+            if re.match(r"^forest([3-9]|1[0-2])$", room_id):
+                return "deep_forest"
+            return region
+    return "special"
+
+
+# ---------------------------------------------------------------------------
+# Room file parsing
+# ---------------------------------------------------------------------------
+
+def normalize_dest(dest_path):
+    """Convert a destination path like 'room/church' to a room_id like 'church'."""
+    dest = dest_path.strip().strip('"')
+    if dest.startswith("/"):
+        dest = dest[1:]
+    if dest.startswith("room/"):
+        dest = dest[5:]
+    return dest
+
+
+def extract_strings(text):
+    """Extract all double-quoted string literals from text (ignoring escapes)."""
+    return re.findall(r'"([^"]*)"', text)
+
+
+def parse_macro_exits(content):
+    """Parse ONE_EXIT/TWO_EXIT/THREE_EXIT/FOUR_EXIT macro calls."""
+    exits = []
+    macro_counts = {"ONE_EXIT": 1, "TWO_EXIT": 2, "THREE_EXIT": 3, "FOUR_EXIT": 4}
+
+    for macro, n_exits in macro_counts.items():
+        pattern = rf'{macro}\s*\('
+        match = re.search(pattern, content)
+        if not match:
+            continue
+        # Extract everything from the macro call opening paren to end of file
+        start = match.end()
+        # Find balanced closing paren
+        depth = 1
+        pos = start
+        while pos < len(content) and depth > 0:
+            if content[pos] == '(':
+                depth += 1
+            elif content[pos] == ')':
+                depth -= 1
+            pos += 1
+        args_text = content[start:pos - 1]
+        strings = extract_strings(args_text)
+        # First 2*n_exits strings are (dest, dir) pairs
+        for i in range(0, min(n_exits * 2, len(strings)), 2):
+            if i + 1 < len(strings):
+                dest = normalize_dest(strings[i])
+                direction = strings[i + 1]
+                exits.append((direction, dest))
+        break  # Only one macro per file
+
+    return exits
+
+
+def parse_dest_dir(content):
+    """Parse dest_dir = ({...}) array assignments."""
+    exits = []
+    pattern = r'dest_dir\s*=\s*\(\{(.*?)\}\)'
+    matches = re.findall(pattern, content, re.DOTALL)
+    for match_text in matches:
+        strings = extract_strings(match_text)
+        for i in range(0, len(strings) - 1, 2):
+            dest = normalize_dest(strings[i])
+            direction = strings[i + 1]
+            exits.append((direction, dest))
+    return exits
+
+
+def parse_move_player(content):
+    """Parse move_player("direction#destination") calls."""
+    exits = []
+    pattern = r'move_player\s*\(\s*"([^"]+)"\s*\)'
+    for match in re.finditer(pattern, content):
+        value = match.group(1)
+        if "#" in value:
+            direction, dest_path = value.split("#", 1)
+            dest = normalize_dest(dest_path)
+            exits.append((direction, dest))
+    return exits
+
+
+def parse_short_desc(content):
+    """Try to extract the short description from a room file."""
+    # Pattern 1: short_desc = "...";
+    m = re.search(r'short_desc\s*=\s*"([^"]+)"', content)
+    if m:
+        return m.group(1)
+    # Pattern 2: return "..." inside short() function
+    m = re.search(r'string\s+short\s*\([^)]*\)\s*\{[^}]*return\s+"([^"]+)"', content, re.DOTALL)
+    if m:
+        return m.group(1)
+    # Pattern 3: SH parameter in macro (the string after exit pairs)
+    macro_counts = {"ONE_EXIT": 1, "TWO_EXIT": 2, "THREE_EXIT": 3, "FOUR_EXIT": 4}
+    for macro, n_exits in macro_counts.items():
+        match = re.search(rf'{macro}\s*\(', content)
+        if match:
+            start = match.end()
+            depth = 1
+            pos = start
+            while pos < len(content) and depth > 0:
+                if content[pos] == '(':
+                    depth += 1
+                elif content[pos] == ')':
+                    depth -= 1
+                pos += 1
+            args_text = content[start:pos - 1]
+            strings = extract_strings(args_text)
+            sh_index = n_exits * 2  # SH comes after the exit pairs
+            if sh_index < len(strings):
+                return strings[sh_index]
+            break
+    return None
+
+
+def label_from_id(room_id):
+    """Generate a human-readable label from a room ID."""
+    name = room_id.split("/")[-1]
+    # Special short labels for south rooms
+    m = re.match(r"sforst(\d+)", name)
+    if m:
+        return f"SF {m.group(1)}"
+    m = re.match(r"sshore(\d+)", name)
+    if m:
+        return f"Shore {m.group(1)}"
+    m = re.match(r"sislnd(\d+)", name)
+    if m:
+        return f"Isle {m.group(1)}"
+    # General: replace underscores, title case
+    return name.replace("_", " ").title()
+
+
+def discover_rooms(mudlib_path):
+    """Walk mudlib/room/ and parse all .c files.
+
+    Returns:
+        rooms: dict[room_id -> (label, region)]
+        edges: list[(room_id, direction, dest_room_id)]
+    """
+    room_dir = os.path.join(mudlib_path, "room")
+    rooms = {}
+    edges = []
+
+    for dirpath, _dirnames, filenames in os.walk(room_dir):
+        for fname in sorted(filenames):
+            if not fname.endswith(".c"):
+                continue
+            # Compute room_id relative to room/
+            rel = os.path.relpath(os.path.join(dirpath, fname), room_dir)
+            room_id = rel[:-2]  # strip .c
+
+            # Skip non-room files
+            if fname in SKIP_FILES:
+                continue
+
+            filepath = os.path.join(dirpath, fname)
+            try:
+                with open(filepath, "r", encoding="latin-1") as f:
+                    content = f.read()
+            except OSError:
+                continue
+
+            # Parse exits using all three methods
+            file_exits = []
+            file_exits.extend(parse_macro_exits(content))
+            file_exits.extend(parse_dest_dir(content))
+            file_exits.extend(parse_move_player(content))
+
+            # Deduplicate exits (same direction+dest)
+            seen = set()
+            unique_exits = []
+            for direction, dest in file_exits:
+                key = (direction, dest)
+                if key not in seen:
+                    seen.add(key)
+                    unique_exits.append((direction, dest))
+
+            # Get label
+            short = parse_short_desc(content)
+            label = short if short else label_from_id(room_id)
+
+            # Classify region
+            region = classify_region(room_id)
+
+            rooms[room_id] = (label, region)
+            for direction, dest in unique_exits:
+                edges.append((room_id, direction, dest))
+
+    return rooms, edges
+
+
+# ---------------------------------------------------------------------------
+# Graph construction
+# ---------------------------------------------------------------------------
+
+def build_graph(rooms, edges):
+    """Build a NetworkX graph from rooms and edges."""
+    G = nx.Graph()
+
+    for room_id, (label, region) in rooms.items():
+        G.add_node(room_id, label=label, region=region)
+
+    for src, direction, dst in edges:
+        if src in rooms and dst in rooms:
+            if not G.has_edge(src, dst):
+                G.add_edge(src, dst, direction=direction)
+
+    return G
+
+
+# ---------------------------------------------------------------------------
+# Layout
+# ---------------------------------------------------------------------------
+
+# Region center seeds — approximate positions on the canvas (normalized 0-1)
+REGION_SEEDS = {
+    "special":      (0.08, 0.06),
+    "mines":        (0.14, 0.20),
+    "mountains":    (0.59, 0.07),
+    "plains":       (0.59, 0.22),
+    "giants":       (0.30, 0.26),
+    "orcs":         (0.30, 0.32),
+    "forest":       (0.44, 0.34),
+    "deep_forest":  (0.33, 0.40),
+    "village":      (0.63, 0.37),
+    "east_road":    (0.77, 0.30),
+    "sea":          (0.85, 0.37),
+    "elevator":     (0.54, 0.34),
+    "underground":  (0.63, 0.50),
+    "south_forest": (0.50, 0.72),
+    "shore":        (0.50, 0.77),
+    "island":       (0.50, 0.82),
+}
+
+MARGIN = 100
+
+
+def compute_layout(G):
+    """Compute room positions using region-seeded spring layout."""
+    if len(G.nodes) == 0:
+        return {}
+
+    # Create initial positions based on region seeds
+    initial_pos = {}
+    region_counts = defaultdict(int)
+    region_nodes = defaultdict(list)
+
+    for node in G.nodes:
+        region = G.nodes[node].get("region", "special")
+        region_nodes[region].append(node)
+
+    for region, nodes in region_nodes.items():
+        cx, cy = REGION_SEEDS.get(region, (0.5, 0.5))
+        n = len(nodes)
+        for i, node in enumerate(nodes):
+            # Spread nodes in a small circle around the region center
+            if n > 1:
+                angle = 2 * math.pi * i / n
+                spread = 0.03 + 0.01 * min(n, 30) / 30
+                dx = spread * math.cos(angle)
+                dy = spread * math.sin(angle)
+            else:
+                dx, dy = 0, 0
+            initial_pos[node] = (cx + dx, cy + dy)
+
+    # Run spring layout
+    pos = nx.spring_layout(
+        G,
+        pos=initial_pos,
+        k=2.0 / math.sqrt(max(len(G.nodes), 1)),
+        iterations=150,
+        seed=42,
+    )
+
+    # Scale to canvas
+    if not pos:
+        return {}
+
+    xs = [p[0] for p in pos.values()]
+    ys = [p[1] for p in pos.values()]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    range_x = max_x - min_x if max_x != min_x else 1
+    range_y = max_y - min_y if max_y != min_y else 1
+
+    canvas_w = WIDTH - 2 * MARGIN
+    canvas_h = HEIGHT - 2 * MARGIN
+
+    scaled = {}
+    for node, (x, y) in pos.items():
+        sx = MARGIN + int((x - min_x) / range_x * canvas_w)
+        sy = MARGIN + int((y - min_y) / range_y * canvas_h)
+        scaled[node] = (sx, sy)
+
+    return scaled
+
+
 # ---------------------------------------------------------------------------
 # Font helpers
 # ---------------------------------------------------------------------------
+
 def load_font(size):
     """Try to load a good monospace/sans font, fall back to default."""
     candidates = [
@@ -65,597 +453,9 @@ FONT_TITLE = load_font(28)
 FONT_LEGEND = load_font(12)
 FONT_SMALL = load_font(8)
 
-# ---------------------------------------------------------------------------
-# Room definitions: room_id -> (x, y, label, region)
-# Coordinates are pixel positions for the center of each room box.
-# ---------------------------------------------------------------------------
-rooms = {}
-
-
-def add_rooms(base_x, base_y, defs):
-    """Add rooms with positions relative to (base_x, base_y)."""
-    for room_id, dx, dy, label, region in defs:
-        rooms[room_id] = (base_x + dx, base_y + dy, label, region)
-
-
-# ===== MOUNTAINS =====
-add_rooms(2700, 200, [
-    ("mount_top",  -100, -80, "Mountain Top",  "mountains"),
-    ("mount_top2",  100, -80, "Plateau",       "mountains"),
-    ("ravine",        0,   0, "Ravine",        "mountains"),
-    ("mount_pass",    0,  90, "Mountain Pass",  "mountains"),
-])
-
-# ===== PLAINS =====
-# Plains are north of the forest clearing, south of mount_pass.
-# Complex grid — positioned carefully based on connectivity.
-add_rooms(2700, 550, [
-    ("plane11",    0,   0,  "Plain 11",  "plains"),
-    ("plane13",  200,   0,  "Plain 13",  "plains"),
-    ("plane12", -200,  80,  "Plain 12",  "plains"),
-    ("plane6",     0,  80,  "Plain 6",   "plains"),
-    ("plane8",   200,  80,  "Plain 8",   "plains"),
-    ("deep_forest1", -400, 80, "Deep Forest", "deep_forest"),
-    ("plane10", -200, 170,  "Plain 10",  "plains"),
-    ("plane7",  -200, 260,  "Plain 7",   "plains"),
-    ("plane3",     0, 170,  "Plain 3",   "plains"),
-    ("ruin",     200, 170,  "Ruin",      "plains"),
-    ("plane9",   380, 170,  "Plain 9",   "plains"),
-    ("plane2",     0, 260,  "Plain 2",   "plains"),
-    ("plane4",   200, 260,  "Plain 4",   "plains"),
-    ("plane5",  -200, 350,  "Plain 5",   "plains"),
-    ("plane1",     0, 350,  "Plain 1",   "plains"),
-])
-
-# ===== GIANTS =====
-add_rooms(1650, 810, [
-    ("big_tree",     0,   0, "Big Tree",       "giants"),
-    ("giant_path", -180,   0, "Giant Path",    "giants"),
-    ("giant_lair", -360,   0, "Giant Lair",    "giants"),
-    ("giant_conf", -540,   0, "Giants' Conf",  "giants"),
-])
-
-# ===== ORC VALLEY =====
-add_rooms(1500, 1000, [
-    ("orc_treasure",  0, -80, "Orc Treasury",  "orcs"),
-    ("fortress",      0,   0, "Orc Fortress",  "orcs"),
-    ("orc_vall",      0,  80, "Orc Valley",    "orcs"),
-])
-
-# ===== FOREST (main corridor) =====
-add_rooms(2000, 1100, [
-    ("slope",      -500,   0, "Slope",       "forest"),
-    ("forest2",    -330,   0, "Forest",      "forest"),
-    ("clearing",   -160,   0, "Clearing",    "forest"),
-    ("forest1",      10,   0, "Forest",      "forest"),
-    ("wild1",       180,   0, "Wilderness",  "forest"),
-    ("hump",        370,   0, "Bridge",      "forest"),
-])
-
-# ===== DEEP FOREST (south of slope) =====
-add_rooms(1500, 1200, [
-    ("forest3",     0,    0, "Forest 3",  "deep_forest"),
-    ("forest4",     0,   80, "Forest 4",  "deep_forest"),
-    ("forest5",  -150,  160, "Forest 5",  "deep_forest"),
-    ("forest6",   150,   80, "Forest 6",  "deep_forest"),
-    ("forest7",   150,  160, "Forest 7",  "deep_forest"),
-    ("forest8",  -150,  250, "Forest 8",  "deep_forest"),
-    ("forest9",     0,  250, "Forest 9",  "deep_forest"),
-    ("forest10",  150,  250, "Forest 10", "deep_forest"),
-    ("forest11",    0,  340, "Forest 11", "deep_forest"),
-    ("forest12",  150,  340, "Forest 12", "deep_forest"),
-])
-
-# ===== VILLAGE CORE =====
-add_rooms(2750, 1200, [
-    ("church",       0, -100, "Church",        "village"),
-    ("vill_green",   0,    0, "Village Green",  "village"),
-    ("vill_track", 150,    0, "Village Track",  "village"),
-    ("vill_road1", 300,    0, "Village Road",   "village"),
-    ("vill_road2", 470,    0, "Village Road 2", "village"),
-    ("vill_shore", 640,    0, "Road",           "village"),
-])
-
-# ===== VILLAGE BUILDINGS =====
-add_rooms(2750, 1200, [
-    ("yard",        300, -80, "Yard",           "village"),
-    ("pub2",        430, -80, "Pub",            "village"),
-    ("narr_alley",  300,  80, "Narrow Alley",   "village"),
-    ("bank",        430,  80, "Bank",           "village"),
-    ("bankroom",    560,  80, "Back Room",      "village"),
-    ("post",        300, 160, "Post Office",    "village"),
-    ("shop",        470, -80, "Shop",           "village"),
-    ("storage",     590, -80, "Storage",        "village"),
-    ("adv_guild",   470,  80, "Adv Guild",      "village"),
-    ("adv_inner",   470, 160, "Adv Inner",      "village"),
-    ("adv_inner2",  470, 230, "LPC Board",      "village"),
-    ("station",     470, 160, "Station",        "underground"),  # overlap; move
-    ("crop",        640,  80, "Fields",         "village"),
-])
-# Fix station position to avoid overlap with adv_inner
-rooms["station"] = (3220, 1440, "Station", "underground")
-
-# ===== JETTY & SEA =====
-add_rooms(3600, 1200, [
-    ("jetty",         0,   0, "Jetty Road",     "sea"),
-    ("vill_shore2", 140,   0, "Shore",          "sea"),
-    ("jetty2",      280,   0, "Jetty",          "sea"),
-    ("sea",         420,   0, "At Sea",         "sea"),
-    ("sea_bottom",  420,  80, "Sea Bottom",     "sea"),
-])
-
-# ===== EAST ROAD =====
-add_rooms(3550, 900, [
-    ("inn",        -140,   0, "Inn",         "east_road"),
-    ("eastroad5",     0,   0, "East Rd 5",  "east_road"),
-    ("eastroad4",     0,  70, "East Rd 4",  "east_road"),
-    ("eastroad3",     0, 140, "East Rd 3",  "east_road"),
-    ("eastroad2",     0, 210, "East Rd 2",  "east_road"),
-    ("eastroad1",     0, 280, "East Rd 1",  "east_road"),
-    ("sunalley1",  -150, 140, "Sun Alley 1", "east_road"),
-    ("sunalley2",  -300, 140, "Sun Alley 2", "east_road"),
-])
-
-# ===== ELEVATOR SYSTEM =====
-add_rooms(2500, 1100, [
-    ("elevator",     0,   0, "Elevator",    "elevator"),
-    ("attic",        0, -70, "Attic",       "elevator"),
-    ("wiz_hall",     0,  70, "Wizards Hall", "elevator"),
-    ("quest_room", 150,  70, "Quest Room",  "elevator"),
-])
-
-# ===== UNDERGROUND: WELL & MAZE =====
-add_rooms(2900, 1550, [
-    ("well",          0,   0, "Well",          "underground"),
-    ("maze1",       -10,  80, "Maze 1",        "underground"),
-    ("maze2",       -10, 150, "Maze 2",        "underground"),
-    ("maze3",       -10, 220, "Maze 3",        "underground"),
-    ("maze4",       -10, 290, "Maze 4",        "underground"),
-    ("maze5",       -10, 360, "Maze 5 (End)",  "underground"),
-    ("door_trap",  -180,  80, "Trap Room",     "underground"),
-    ("after_trap", -330,  80, "Black Room",    "underground"),
-])
-
-# ===== SPECIAL ROOMS =====
-add_rooms(400, 200, [
-    ("void",     0,   0, "The Void",    "special"),
-    ("prison",   0,  60, "Prison",      "special"),
-    ("death_room", 0, 120, "Death Room", "special"),
-])
-
-# ===== MINES (inset area, top-left) =====
-# Main corridor: tunnel through tunnel_room (vertical)
-MX, MY = 650, 350
-add_rooms(MX, MY, [
-    ("mine/tunnel",       0,    0, "Entrance",    "mines"),
-    ("mine/tunnel2",      0,   60, "Tunnel 2",    "mines"),
-    ("mine/tunnel3",      0,  120, "Tunnel 3",    "mines"),
-    ("mine/tunnel4",      0,  180, "Tunnel 4",    "mines"),
-    ("mine/tunnel5",      0,  240, "Tunnel 5",    "mines"),
-    ("mine/tunnel_room",  0,  300, "Stone Table",  "mines"),
-])
-
-# Shaft branch from tunnel3
-add_rooms(MX, MY, [
-    ("mine/tunnel8",    120, 160, "Shaft",        "mines"),
-    ("mine/tunnel9",    120, 230, "Junction",     "mines"),
-])
-
-# West branch from tunnel9
-add_rooms(MX, MY, [
-    ("mine/tunnel10",    30, 280, "Tunnel 10",  "mines"),
-    ("mine/tunnel11",    30, 340, "Tunnel 11",  "mines"),
-    ("mine/tunnel12",    30, 400, "Tunnel 12",  "mines"),
-    ("mine/tunnel13",    30, 460, "Dead End",   "mines"),
-])
-
-# East branch from tunnel9
-add_rooms(MX, MY, [
-    ("mine/tunnel14",   220, 280, "Tunnel 14",  "mines"),
-    ("mine/tunnel15",   220, 340, "Tunnel 15",  "mines"),
-    ("mine/tunnel16",   220, 400, "Tunnel 16",  "mines"),
-    ("mine/tunnel17",   220, 460, "Tunnel 17",  "mines"),
-    ("mine/tunnel18",   330, 460, "Dead End",   "mines"),
-    ("mine/tunnel19",   220, 520, "Tunnel 19",  "mines"),
-])
-
-# Deep mine corridor
-add_rooms(MX, MY, [
-    ("mine/tunnel20",    30, 580, "Dead End",    "mines"),
-    ("mine/tunnel21",   120, 580, "Tunnel 21",   "mines"),
-    ("mine/tunnel22",   220, 580, "Tunnel 22",   "mines"),
-    ("mine/tunnel23",   330, 580, "Tunnel 23",   "mines"),
-    ("mine/tunnel24",   440, 580, "Tunnel 24",   "mines"),
-    ("mine/tunnel25",   440, 640, "Tunnel 25",   "mines"),
-    ("mine/tunnel26",   440, 700, "Tunnel 26",   "mines"),
-    ("mine/tunnel27",   330, 700, "Dead End",    "mines"),
-    ("mine/tunnel28",   550, 700, "Tunnel 28",   "mines"),
-    ("mine/tunnel29",   660, 700, "DRAGON!",     "mines"),
-])
-
-# ===== CRESCENT LAKE REGION =====
-# Three concentric rings: forest (outer), shore (middle), island (inner)
-
-LAKE_CX, LAKE_CY = 2300, 2650
-LAKE_R = 480       # shore radius
-FOREST_R = 640     # outer forest radius
-ISLE_R = 200       # island outer radius
-ISLE_IR = 100      # island inner radius
-
-# --- South Forest: 49 rooms on outer ring, organized by sector ---
-# Sector 1 (NE, E, SE): sforst1-20 — angles 345° to 135° (150° span)
-# Sector 2 (S, SW): sforst31-45 — angles 145° to 225° (80° span)
-# Sector 3 (W, NW): sforst21-30 — angles 230° to 275° (45° span)
-# Sector 4 (N): sforst46-49 — angles 295° to 335° (40° span)
-
-def place_ring(room_nums, start_angle, end_angle, radius, cx, cy, prefix, label_prefix, region):
-    """Place rooms evenly on an arc of a circle."""
-    n = len(room_nums)
-    # Handle wrapping past 360°
-    span = end_angle - start_angle
-    if span < 0:
-        span += 360
-    for i, num in enumerate(room_nums):
-        if n > 1:
-            angle_deg = start_angle + span * i / (n - 1)
-        else:
-            angle_deg = start_angle
-        angle_rad = math.radians(angle_deg - 90)  # -90 so 0° = top
-        x = cx + int(radius * math.cos(angle_rad))
-        y = cy + int(radius * math.sin(angle_rad))
-        rooms[f"{prefix}{num}"] = (x, y, f"{label_prefix}{num}", region)
-
-# South forest sectors
-place_ring(list(range(1, 21)), 345, 135, FOREST_R,
-           LAKE_CX, LAKE_CY, "south/sforst", "SF ", "south_forest")
-place_ring(list(range(31, 46)), 145, 225, FOREST_R,
-           LAKE_CX, LAKE_CY, "south/sforst", "SF ", "south_forest")
-place_ring(list(range(21, 31)), 230, 275, FOREST_R,
-           LAKE_CX, LAKE_CY, "south/sforst", "SF ", "south_forest")
-place_ring(list(range(46, 50)), 295, 335, FOREST_R,
-           LAKE_CX, LAKE_CY, "south/sforst", "SF ", "south_forest")
-
-# --- Shore: 30 rooms on middle ring, evenly spaced ---
-place_ring(list(range(1, 31)), 0, 348, LAKE_R,
-           LAKE_CX, LAKE_CY, "south/sshore", "Shore ", "shore")
-
-# --- Isle of the Magi: outer ring (1-12) and inner ring (13-18) ---
-place_ring(list(range(1, 13)), 0, 330, ISLE_R,
-           LAKE_CX, LAKE_CY, "south/sislnd", "Isle ", "island")
-
-isle_inner_labels = {
-    13: "Isle 13", 14: "Isle 14", 15: "Isle 15",
-    16: "Isle 16", 17: "Old Well", 18: "Tower Ruins",
-}
-for i, num in enumerate([13, 14, 15, 16, 17, 18]):
-    angle_deg = i * 60  # evenly spaced
-    angle_rad = math.radians(angle_deg - 90)
-    x = LAKE_CX + int(ISLE_IR * math.cos(angle_rad))
-    y = LAKE_CY + int(ISLE_IR * math.sin(angle_rad))
-    rooms[f"south/sislnd{num}"] = (x, y, isle_inner_labels[num], "island")
-
-# Fix special island labels
-rooms["south/sislnd10"] = (rooms["south/sislnd10"][0], rooms["south/sislnd10"][1],
-                           "Focus Point", "island")
-
-# Lair (below the island well)
-rooms["south/lair"] = (LAKE_CX, LAKE_CY + 40, "Lair", "island")
-
 
 # ---------------------------------------------------------------------------
-# Connections: (room_id_1, room_id_2)
-# ---------------------------------------------------------------------------
-connections = [
-    # Mountains
-    ("mount_top", "mount_top2"),
-    ("mount_top", "ravine"),
-    ("ravine", "mount_pass"),
-    ("mount_pass", "plane11"),
-    ("mount_pass", "mine/tunnel"),
-
-    # Plains grid
-    ("plane11", "plane13"),
-    ("plane11", "plane12"),
-    ("plane11", "plane6"),
-    ("plane6", "plane13"),
-    ("plane6", "plane12"),
-    ("plane6", "plane3"),
-    ("plane6", "plane10"),
-    ("plane8", "plane13"),
-    ("plane8", "plane6"),
-    ("plane8", "ruin"),
-    ("plane3", "ruin"),
-    ("plane3", "plane7"),
-    ("plane3", "plane2"),
-    ("ruin", "plane4"),
-    ("ruin", "plane9"),
-    ("plane2", "plane4"),
-    ("plane2", "plane5"),
-    ("plane2", "plane1"),
-    ("plane7", "plane5"),
-    ("plane7", "plane10"),
-    ("plane7", "big_tree"),
-    ("plane10", "plane12"),
-    ("plane12", "deep_forest1"),
-    ("plane1", "clearing"),
-
-    # Giants
-    ("big_tree", "giant_path"),
-    ("giant_path", "giant_lair"),
-    ("giant_lair", "giant_conf"),
-
-    # Orc Valley
-    ("orc_vall", "slope"),
-    ("orc_vall", "fortress"),
-    ("fortress", "orc_treasure"),
-
-    # Forest corridor
-    ("slope", "forest2"),
-    ("forest2", "clearing"),
-    ("clearing", "forest1"),
-    ("forest1", "wild1"),
-    ("wild1", "hump"),
-    ("hump", "vill_green"),
-    ("slope", "forest3"),
-
-    # Deep forest
-    ("forest3", "forest4"),
-    ("forest4", "forest5"),
-    ("forest4", "forest6"),
-    ("forest4", "forest7"),
-    ("forest5", "forest8"),
-    ("forest7", "forest10"),
-    ("forest8", "forest9"),
-    ("forest9", "forest10"),
-    ("forest9", "forest11"),
-    ("forest11", "forest12"),
-
-    # Village core
-    ("church", "vill_green"),
-    ("vill_green", "vill_track"),
-    ("vill_track", "vill_road1"),
-    ("vill_road1", "vill_road2"),
-    ("vill_road2", "vill_shore"),
-
-    # Village buildings
-    ("vill_road1", "yard"),
-    ("yard", "pub2"),
-    ("vill_road1", "narr_alley"),
-    ("narr_alley", "bank"),
-    ("bank", "bankroom"),
-    ("narr_alley", "post"),
-    ("vill_road2", "shop"),
-    ("shop", "storage"),
-    ("vill_road2", "adv_guild"),
-    ("adv_guild", "adv_inner"),
-    ("adv_inner", "adv_inner2"),
-    ("vill_road2", "station"),
-    ("vill_shore", "crop"),
-
-    # East Road
-    ("vill_shore", "eastroad1"),
-    ("eastroad1", "eastroad2"),
-    ("eastroad2", "eastroad3"),
-    ("eastroad3", "eastroad4"),
-    ("eastroad4", "eastroad5"),
-    ("eastroad5", "inn"),
-    ("eastroad3", "sunalley1"),
-    ("sunalley1", "sunalley2"),
-
-    # Jetty & Sea
-    ("vill_shore", "jetty"),
-    ("jetty", "vill_shore2"),
-    ("vill_shore2", "jetty2"),
-    ("jetty2", "sea"),
-    ("sea", "sea_bottom"),
-
-    # Elevator
-    ("church", "elevator"),
-    ("elevator", "attic"),
-    ("elevator", "wiz_hall"),
-    ("wiz_hall", "quest_room"),
-
-    # Underground
-    ("narr_alley", "well"),
-    ("well", "maze1"),
-    ("maze1", "maze2"),
-    ("maze2", "maze3"),
-    ("maze3", "maze4"),
-    ("maze4", "maze5"),
-    ("well", "door_trap"),
-    ("door_trap", "after_trap"),
-
-    # Mine main corridor
-    ("mine/tunnel", "mine/tunnel2"),
-    ("mine/tunnel2", "mine/tunnel3"),
-    ("mine/tunnel3", "mine/tunnel4"),
-    ("mine/tunnel4", "mine/tunnel5"),
-    ("mine/tunnel5", "mine/tunnel_room"),
-
-    # Mine shaft branch
-    ("mine/tunnel3", "mine/tunnel8"),
-    ("mine/tunnel8", "mine/tunnel9"),
-
-    # Mine west branch
-    ("mine/tunnel9", "mine/tunnel10"),
-    ("mine/tunnel10", "mine/tunnel11"),
-    ("mine/tunnel11", "mine/tunnel12"),
-    ("mine/tunnel12", "mine/tunnel13"),
-
-    # Mine east branch
-    ("mine/tunnel9", "mine/tunnel14"),
-    ("mine/tunnel14", "mine/tunnel15"),
-    ("mine/tunnel15", "mine/tunnel16"),
-    ("mine/tunnel16", "mine/tunnel17"),
-    ("mine/tunnel17", "mine/tunnel18"),
-    ("mine/tunnel17", "mine/tunnel19"),
-
-    # Mine deep corridor
-    ("mine/tunnel19", "mine/tunnel22"),
-    ("mine/tunnel20", "mine/tunnel21"),
-    ("mine/tunnel21", "mine/tunnel22"),
-    ("mine/tunnel22", "mine/tunnel23"),
-    ("mine/tunnel23", "mine/tunnel24"),
-    ("mine/tunnel24", "mine/tunnel25"),
-    ("mine/tunnel25", "mine/tunnel26"),
-    ("mine/tunnel26", "mine/tunnel27"),
-    ("mine/tunnel26", "mine/tunnel28"),
-    ("mine/tunnel28", "mine/tunnel29"),
-
-    # South forest connections (main grid)
-    ("forest12", "south/sforst1"),
-    ("south/sforst1", "south/sforst2"),
-    ("south/sforst2", "south/sforst3"),
-    ("south/sforst3", "south/sforst4"),
-    ("south/sforst1", "south/sforst5"),
-    ("south/sforst5", "south/sforst6"),
-    ("south/sforst6", "south/sforst7"),
-    ("south/sforst7", "south/sforst8"),
-    ("south/sforst2", "south/sforst6"),
-    ("south/sforst3", "south/sforst7"),
-    ("south/sforst4", "south/sforst8"),
-    ("south/sforst4", "south/sforst9"),
-    ("south/sforst9", "south/sforst10"),
-    ("south/sforst10", "south/sforst11"),
-    ("south/sforst11", "south/sforst12"),
-    ("south/sforst12", "south/sforst13"),
-    ("south/sforst13", "south/sforst14"),
-    ("south/sforst14", "south/sforst15"),
-    ("south/sforst15", "south/sforst16"),
-    ("south/sforst16", "south/sforst17"),
-    ("south/sforst16", "south/sforst19"),
-    ("south/sforst17", "south/sforst18"),
-    ("south/sforst18", "south/sforst19"),
-    ("south/sforst18", "south/sforst20"),
-    ("south/sforst19", "south/sforst20"),
-
-    # South forest - southwest cluster
-    ("south/sforst21", "south/sforst22"),
-    ("south/sforst22", "south/sforst23"),
-    ("south/sforst23", "south/sforst24"),
-    ("south/sforst24", "south/sforst25"),
-    ("south/sforst25", "south/sforst26"),
-    ("south/sforst26", "south/sforst27"),
-    ("south/sforst22", "south/sforst27"),
-    ("south/sforst23", "south/sforst26"),
-    ("south/sforst25", "south/sforst29"),
-    ("south/sforst26", "south/sforst28"),
-    ("south/sforst27", "south/sforst28"),  # via shore
-    ("south/sforst28", "south/sforst29"),
-    ("south/sforst29", "south/sforst30"),
-
-    # South forest - southeast cluster
-    ("south/sforst31", "south/sforst32"),
-    ("south/sforst32", "south/sforst33"),
-    ("south/sforst33", "south/sforst34"),
-    ("south/sforst34", "south/sforst35"),
-    ("south/sforst35", "south/sforst36"),
-    ("south/sforst32", "south/sforst36"),
-    ("south/sforst36", "south/sforst37"),
-    ("south/sforst37", "south/sforst38"),
-    ("south/sforst38", "south/sforst39"),
-    ("south/sforst39", "south/sforst40"),
-    ("south/sforst40", "south/sforst41"),
-    ("south/sforst40", "south/sforst42"),
-    ("south/sforst41", "south/sforst42"),
-    ("south/sforst42", "south/sforst43"),  # was sforst44
-    ("south/sforst43", "south/sforst44"),
-    ("south/sforst44", "south/sforst45"),
-    ("south/sforst37", "south/sforst45"),
-    ("south/sforst35", "south/sforst38"),
-    ("south/sforst33", "south/sforst35"),
-
-    # South forest - far south cluster
-    ("south/sforst46", "south/sforst47"),
-    ("south/sforst46", "south/sforst48"),
-    ("south/sforst47", "south/sforst48"),
-    ("south/sforst48", "south/sforst49"),
-    ("south/sforst49", "south/sforst46"),
-
-    # Key forest-to-shore crossing points (sparse, to reduce visual noise)
-    ("south/sforst8", "south/sshore1"),
-    ("south/sforst20", "south/sshore9"),
-    ("south/sforst41", "south/sshore14"),
-    ("south/sforst31", "south/sshore19"),
-    ("south/sforst21", "south/sshore23"),
-    ("south/sforst46", "south/sshore26"),
-
-    # Shore ring (adjacent shore connections)
-    ("south/sshore1", "south/sshore2"),
-    ("south/sshore2", "south/sshore3"),
-    ("south/sshore3", "south/sshore4"),
-    ("south/sshore4", "south/sshore5"),
-    ("south/sshore5", "south/sshore6"),
-    ("south/sshore6", "south/sshore7"),
-    ("south/sshore7", "south/sshore8"),
-    ("south/sshore8", "south/sshore9"),
-    ("south/sshore9", "south/sshore10"),
-    ("south/sshore10", "south/sshore11"),
-    ("south/sshore11", "south/sshore12"),
-    ("south/sshore12", "south/sshore13"),
-    ("south/sshore13", "south/sshore14"),
-    ("south/sshore14", "south/sshore15"),
-    ("south/sshore15", "south/sshore16"),
-    ("south/sshore16", "south/sshore17"),
-    ("south/sshore17", "south/sshore18"),
-    ("south/sshore18", "south/sshore19"),
-    ("south/sshore19", "south/sshore20"),
-    ("south/sshore20", "south/sshore21"),
-    ("south/sshore21", "south/sshore22"),
-    ("south/sshore22", "south/sshore23"),
-    ("south/sshore23", "south/sshore24"),
-    ("south/sshore24", "south/sshore25"),
-    ("south/sshore25", "south/sshore26"),
-    ("south/sshore26", "south/sshore27"),
-    ("south/sshore27", "south/sshore28"),
-    ("south/sshore28", "south/sshore29"),
-    ("south/sshore29", "south/sshore1"),
-    ("south/sshore30", "south/sshore1"),
-
-    # Island crossing
-    ("south/sshore26", "south/sislnd1"),
-
-    # Island connections (outer ring)
-    ("south/sislnd1", "south/sislnd2"),
-    ("south/sislnd2", "south/sislnd3"),
-    ("south/sislnd3", "south/sislnd4"),
-    ("south/sislnd4", "south/sislnd5"),
-    ("south/sislnd5", "south/sislnd6"),
-    ("south/sislnd6", "south/sislnd7"),
-    ("south/sislnd7", "south/sislnd8"),
-    ("south/sislnd8", "south/sislnd9"),
-    ("south/sislnd9", "south/sislnd10"),
-    ("south/sislnd10", "south/sislnd11"),
-    ("south/sislnd11", "south/sislnd12"),
-    ("south/sislnd12", "south/sislnd1"),
-
-    # Island inner connections
-    ("south/sislnd1", "south/sislnd13"),
-    ("south/sislnd2", "south/sislnd14"),
-    ("south/sislnd4", "south/sislnd14"),
-    ("south/sislnd5", "south/sislnd15"),
-    ("south/sislnd6", "south/sislnd16"),
-    ("south/sislnd7", "south/sislnd16"),
-    ("south/sislnd8", "south/sislnd16"),
-    ("south/sislnd8", "south/sislnd17"),
-    ("south/sislnd9", "south/sislnd17"),
-    ("south/sislnd12", "south/sislnd17"),
-    ("south/sislnd12", "south/sislnd13"),
-    ("south/sislnd13", "south/sislnd14"),
-    ("south/sislnd13", "south/sislnd18"),
-    ("south/sislnd14", "south/sislnd15"),
-    ("south/sislnd15", "south/sislnd18"),
-    ("south/sislnd16", "south/sislnd18"),
-    ("south/sislnd17", "south/sislnd18"),
-    ("south/sislnd11", "south/sislnd12"),
-
-    # Lair
-    ("south/sislnd17", "south/lair"),
-]
-
-
-# ---------------------------------------------------------------------------
-# Drawing
+# Drawing helpers
 # ---------------------------------------------------------------------------
 
 def text_size(draw, text, font):
@@ -686,131 +486,170 @@ def draw_room_box(draw, x, y, label, region):
     draw.text((x - tw // 2, y - th // 2), label, fill=text_color, font=FONT_ROOM)
 
 
-def draw_connection(draw, id1, id2):
+def draw_connection(draw, pos, id1, id2, color=(140, 140, 160, 200), width=2):
     """Draw a line between two rooms."""
-    if id1 not in rooms or id2 not in rooms:
+    if id1 not in pos or id2 not in pos:
         return
-    x1, y1 = rooms[id1][0], rooms[id1][1]
-    x2, y2 = rooms[id2][0], rooms[id2][1]
-    draw.line([(x1, y1), (x2, y2)], fill=(140, 140, 160, 200), width=2)
+    x1, y1 = pos[id1]
+    x2, y2 = pos[id2]
+    draw.line([(x1, y1), (x2, y2)], fill=color, width=width)
 
 
-def draw_region_bg(draw, region_name, region_key, bbox, alpha=30):
-    """Draw a semi-transparent region background with label."""
-    x0, y0, x1, y1 = bbox
-    fill = PALETTE[region_key][0]
-    # Darken the fill and apply low alpha
-    bg = (fill[0] // 3, fill[1] // 3, fill[2] // 3, alpha)
-    draw.rounded_rectangle([x0, y0, x1, y1], radius=10, fill=bg,
-                           outline=(fill[0] // 2, fill[1] // 2, fill[2] // 2, 60),
-                           width=1)
-    # Region label
-    tw, th = text_size(draw, region_name, FONT_REGION)
-    draw.text((x0 + 8, y0 + 4), region_name,
-              fill=(fill[0], fill[1], fill[2], 180), font=FONT_REGION)
+def draw_dashed_line(draw, x1, y1, x2, y2, color=(150, 150, 170, 120),
+                     width=2, steps=30):
+    """Draw a dashed line between two points."""
+    for i in range(0, steps, 2):
+        t1 = i / steps
+        t2 = min((i + 1) / steps, 1.0)
+        sx = int(x1 + (x2 - x1) * t1)
+        sy = int(y1 + (y2 - y1) * t1)
+        ex = int(x1 + (x2 - x1) * t2)
+        ey = int(y1 + (y2 - y1) * t2)
+        draw.line([(sx, sy), (ex, ey)], fill=color, width=width)
 
 
-def get_region_bbox(region_key, padding=25):
-    """Compute bounding box for all rooms in a region."""
-    xs = []
-    ys = []
-    for rid, (x, y, lbl, reg) in rooms.items():
-        if reg == region_key:
-            tw, _ = text_size(ImageDraw.Draw(Image.new("RGBA", (1, 1))), lbl, FONT_ROOM)
-            xs.extend([x - tw // 2 - 8, x + tw // 2 + 8])
-            ys.extend([y - 14, y + 14])
-    if not xs:
-        return None
-    return (min(xs) - padding, min(ys) - padding,
-            max(xs) + padding, max(ys) + padding)
+# ---------------------------------------------------------------------------
+# Region label positions (computed from room positions)
+# ---------------------------------------------------------------------------
+
+REGION_DISPLAY_NAMES = {
+    "mountains":    "MOUNTAINS",
+    "mines":        "MINES",
+    "plains":       "THE GREAT PLAINS",
+    "giants":       "GIANT TERRITORY",
+    "orcs":         "ORC VALLEY",
+    "forest":       "FOREST",
+    "deep_forest":  "DEEP FOREST",
+    "village":      "VILLAGE",
+    "east_road":    "EAST ROAD",
+    "sea":          "THE SEA",
+    "underground":  "UNDERGROUND",
+    "south_forest": "DIMLY LIT FOREST",
+    "shore":        "CRESCENT LAKE",
+    "island":       "ISLE OF THE MAGI",
+    "special":      "SPECIAL ROOMS",
+    "elevator":     "ELEVATOR",
+}
+
+
+def compute_region_label_positions(G, pos):
+    """Compute a label position for each region (above its bounding box)."""
+    region_positions = defaultdict(list)
+    for node in G.nodes:
+        if node in pos:
+            region = G.nodes[node].get("region", "special")
+            region_positions[region].append(pos[node])
+
+    labels = []
+    for region, positions in region_positions.items():
+        if not positions:
+            continue
+        xs = [p[0] for p in positions]
+        ys = [p[1] for p in positions]
+        # Place label above the top-left of the region bbox
+        lx = min(xs) - 10
+        ly = min(ys) - 30
+        name = REGION_DISPLAY_NAMES.get(region, region.upper())
+        labels.append((name, lx, ly, region))
+
+    return labels
+
+
+# ---------------------------------------------------------------------------
+# Identify long-distance connections for dashed lines
+# ---------------------------------------------------------------------------
+
+def find_long_connections(G, pos, threshold=500):
+    """Find edges that span a long pixel distance (cross-region links)."""
+    long_edges = set()
+    for u, v in G.edges:
+        if u in pos and v in pos:
+            x1, y1 = pos[u]
+            x2, y2 = pos[v]
+            dist = math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+            if dist > threshold:
+                long_edges.add((u, v))
+    return long_edges
 
 
 # ---------------------------------------------------------------------------
 # Main rendering
 # ---------------------------------------------------------------------------
-def render():
+
+def render(G, pos, out_dir):
+    """Render the world map PNG."""
     img = Image.new("RGBA", (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img, "RGBA")
 
-    # --- Region labels (floating text near each region, no background boxes) ---
-    region_annotations = [
-        ("MOUNTAINS",          2700, 85,   "mountains"),
-        ("MINES",              650, 310,   "mines"),
-        ("THE GREAT PLAINS",   2550, 510,  "plains"),
-        ("GIANT TERRITORY",    1050, 775,  "giants"),
-        ("ORC VALLEY",         1440, 885,  "orcs"),
-        ("FOREST",             1850, 1065, "forest"),
-        ("DEEP FOREST",        1350, 1165, "deep_forest"),
-        ("VILLAGE",            2900, 1065, "village"),
-        ("EAST ROAD",          3580, 855,  "east_road"),
-        ("THE SEA",            3800, 1165, "sea"),
-        ("UNDERGROUND",        2750, 1510, "underground"),
-        ("DIMLY LIT FOREST",   2100, 1920, "south_forest"),
-        ("CRESCENT LAKE",      2150, 2080, "shore"),
-        ("ISLE OF THE MAGI",   2200, 2620, "island"),
-        ("SPECIAL ROOMS",      350,  165,  "special"),
-    ]
-    for label, lx, ly, rkey in region_annotations:
-        fill = PALETTE[rkey][0]
+    # Region labels
+    region_labels = compute_region_label_positions(G, pos)
+    for label, lx, ly, rkey in region_labels:
+        fill = PALETTE.get(rkey, PALETTE["special"])[0]
         color = (fill[0], fill[1], fill[2], 120)
-        draw.text((lx, ly), label, fill=color, font=FONT_REGION)
+        draw.text((max(5, lx), max(5, ly)), label, fill=color, font=FONT_REGION)
 
-    # --- Draw lake water (separate layer with proper alpha compositing) ---
-    lake_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
-    lake_draw = ImageDraw.Draw(lake_layer, "RGBA")
-    lake_inner = LAKE_R - 30
-    lake_draw.ellipse([LAKE_CX - lake_inner, LAKE_CY - lake_inner,
-                       LAKE_CX + lake_inner, LAKE_CY + lake_inner],
-                      fill=(20, 45, 100, 25),
-                      outline=(40, 70, 130, 50), width=1)
-    img = Image.alpha_composite(img, lake_layer)
-    draw = ImageDraw.Draw(img, "RGBA")
+    # Draw lake water if shore rooms exist
+    shore_positions = [pos[n] for n in G.nodes
+                       if G.nodes[n].get("region") == "shore" and n in pos]
+    if shore_positions:
+        lake_cx = sum(p[0] for p in shore_positions) // len(shore_positions)
+        lake_cy = sum(p[1] for p in shore_positions) // len(shore_positions)
+        max_r = max(
+            math.sqrt((p[0] - lake_cx) ** 2 + (p[1] - lake_cy) ** 2)
+            for p in shore_positions
+        )
+        lake_r = int(max_r * 0.85)
+        if lake_r > 20:
+            lake_layer = Image.new("RGBA", (WIDTH, HEIGHT), (0, 0, 0, 0))
+            lake_draw = ImageDraw.Draw(lake_layer, "RGBA")
+            lake_draw.ellipse(
+                [lake_cx - lake_r, lake_cy - lake_r,
+                 lake_cx + lake_r, lake_cy + lake_r],
+                fill=(20, 45, 100, 25),
+                outline=(40, 70, 130, 50), width=1,
+            )
+            img = Image.alpha_composite(img, lake_layer)
+            draw = ImageDraw.Draw(img, "RGBA")
 
-    # --- Connection lines (drawn before rooms so they go behind) ---
-    for id1, id2 in connections:
-        draw_connection(draw, id1, id2)
+    # Connection lines (behind rooms)
+    long_edges = find_long_connections(G, pos)
+    for u, v in G.edges:
+        if u in pos and v in pos:
+            if (u, v) in long_edges or (v, u) in long_edges:
+                draw_dashed_line(draw, pos[u][0], pos[u][1],
+                                 pos[v][0], pos[v][1])
+            else:
+                draw_connection(draw, pos, u, v)
 
-    # --- Draw special long-distance connection indicators ---
-    # mount_pass to mine/tunnel (dashed-style)
-    if "mount_pass" in rooms and "mine/tunnel" in rooms:
-        x1, y1 = rooms["mount_pass"][0], rooms["mount_pass"][1]
-        x2, y2 = rooms["mine/tunnel"][0], rooms["mine/tunnel"][1]
-        # Draw dashed line
-        steps = 30
-        for i in range(0, steps, 2):
-            t1 = i / steps
-            t2 = min((i + 1) / steps, 1.0)
-            sx = int(x1 + (x2 - x1) * t1)
-            sy = int(y1 + (y2 - y1) * t1)
-            ex = int(x1 + (x2 - x1) * t2)
-            ey = int(y1 + (y2 - y1) * t2)
-            draw.line([(sx, sy), (ex, ey)], fill=(150, 150, 170, 120), width=2)
+    # Room boxes
+    for node in G.nodes:
+        if node in pos:
+            x, y = pos[node]
+            label = G.nodes[node].get("label", node)
+            region = G.nodes[node].get("region", "special")
+            draw_room_box(draw, x, y, label, region)
 
-    # --- Room boxes ---
-    for rid, (x, y, label, region) in rooms.items():
-        draw_room_box(draw, x, y, label, region)
-
-    # --- Title ---
+    # Title
     title = "LPmud 2.4.5 World Map"
     tw, th = text_size(draw, title, FONT_TITLE)
     draw.text((WIDTH // 2 - tw // 2, 15), title,
               fill=(220, 210, 180), font=FONT_TITLE)
-    subtitle = "~200 rooms across 15+ regions"
+    subtitle = f"~{len(G.nodes)} rooms across {len(set(nx.get_node_attributes(G, 'region').values()))} regions (auto-discovered)"
     sw, sh = text_size(draw, subtitle, FONT_LEGEND)
     draw.text((WIDTH // 2 - sw // 2, 48), subtitle,
               fill=(160, 155, 140), font=FONT_LEGEND)
 
-    # --- Compass Rose ---
+    # Compass Rose
     cx, cy = WIDTH - 80, 80
     r = 30
     draw.line([(cx, cy - r), (cx, cy + r)], fill=(180, 180, 190), width=2)
     draw.line([(cx - r, cy), (cx + r, cy)], fill=(180, 180, 190), width=2)
-    for label, dx, dy in [("N", 0, -r - 12), ("S", 0, r + 4),
-                          ("W", -r - 14, -4), ("E", r + 4, -4)]:
-        draw.text((cx + dx, cy + dy), label,
+    for lbl, dx, dy in [("N", 0, -r - 12), ("S", 0, r + 4),
+                         ("W", -r - 14, -4), ("E", r + 4, -4)]:
+        draw.text((cx + dx, cy + dy), lbl,
                   fill=(200, 200, 210), font=FONT_LEGEND)
 
-    # --- Legend ---
+    # Legend
     legend_x, legend_y = WIDTH - 200, 160
     draw.text((legend_x, legend_y - 25), "REGIONS",
               fill=(200, 195, 180), font=FONT_LEGEND)
@@ -829,21 +668,21 @@ def render():
         ("South Forest",   "south_forest"),
         ("Lake Shore",     "shore"),
         ("Isle of Magi",   "island"),
+        ("Elevator",       "elevator"),
         ("Special",        "special"),
     ]
     for i, (name, key) in enumerate(items):
         y = legend_y + i * 22
-        fill, border, _ = PALETTE[key]
+        fill_c, border_c, _ = PALETTE[key]
         draw.rounded_rectangle([legend_x, y, legend_x + 16, y + 14],
-                               radius=2, fill=fill, outline=border)
+                               radius=2, fill=fill_c, outline=border_c)
         draw.text((legend_x + 22, y + 1), name,
                   fill=(190, 185, 170), font=FONT_ROOM)
 
-    # --- Notes ---
+    # Notes
     notes = [
         "Dashed line = distant connection",
-        "DRAGON! = Boss encounter",
-        "Maze has randomized exits",
+        "Rooms and connections auto-discovered from mudlib",
     ]
     ny = legend_y + len(items) * 22 + 15
     for note in notes:
@@ -851,17 +690,205 @@ def render():
                   fill=(140, 135, 120), font=FONT_SMALL)
         ny += 13
 
-    # --- Convert to RGB and save ---
+    # Save
     output = img.convert("RGB")
-    out_dir = os.path.join(os.path.dirname(__file__), "..", "docs")
     os.makedirs(out_dir, exist_ok=True)
     out_path = os.path.join(out_dir, "world-map.png")
     output.save(out_path, "PNG")
     print(f"Map saved to {os.path.abspath(out_path)}")
     print(f"  Canvas: {WIDTH}x{HEIGHT}")
-    print(f"  Rooms: {len(rooms)}")
-    print(f"  Connections: {len(connections)}")
+    print(f"  Rooms: {len(G.nodes)}")
+    print(f"  Connections: {len(G.edges)}")
+    return out_path
+
+
+# ---------------------------------------------------------------------------
+# Text file generation
+# ---------------------------------------------------------------------------
+
+def generate_connectivity_txt(G, edges_raw, out_dir):
+    """Generate room-connectivity.txt from the graph."""
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "room-connectivity.txt")
+
+    # Group edges by source room
+    exits_by_room = defaultdict(list)
+    for src, direction, dst in edges_raw:
+        if src in G.nodes and dst in G.nodes:
+            exits_by_room[src].append((direction, dst))
+
+    # Group rooms by region
+    rooms_by_region = defaultdict(list)
+    for node in sorted(G.nodes):
+        region = G.nodes[node].get("region", "special")
+        rooms_by_region[region].append(node)
+
+    region_order = [
+        ("special",      "SPECIAL ROOMS"),
+        ("village",      "VILLAGE"),
+        ("elevator",     "ELEVATOR SYSTEM"),
+        ("east_road",    "EAST ROAD"),
+        ("sea",          "JETTY & SEA"),
+        ("forest",       "FOREST"),
+        ("deep_forest",  "DEEP FOREST"),
+        ("plains",       "PLAINS"),
+        ("mountains",    "MOUNTAINS"),
+        ("giants",       "GIANTS"),
+        ("orcs",         "ORC VALLEY"),
+        ("underground",  "UNDERGROUND"),
+        ("mines",        "MINES"),
+        ("south_forest", "SOUTH FOREST"),
+        ("shore",        "CRESCENT LAKE SHORE"),
+        ("island",       "ISLE OF THE MAGI"),
+    ]
+
+    lines = []
+    sep = "=" * 78
+    lines.append(sep)
+    lines.append("LPMud 2.4.5 COMPLETE ROOM CONNECTIVITY MAP")
+    lines.append(sep)
+    lines.append("")
+    lines.append("Auto-generated by scripts/generate-map.py from mudlib room files.")
+    lines.append("Format: room_id: \"Short Description\" -> direction:destination, ...")
+    lines.append("")
+
+    for region_key, region_title in region_order:
+        if region_key not in rooms_by_region:
+            continue
+        nodes = rooms_by_region[region_key]
+        lines.append(sep)
+        lines.append(region_title)
+        lines.append(sep)
+        lines.append("")
+        for node in sorted(nodes):
+            label = G.nodes[node].get("label", node)
+            room_exits = exits_by_room.get(node, [])
+            if room_exits:
+                exit_str = ", ".join(f"{d}:room/{dst}" for d, dst in room_exits)
+            else:
+                exit_str = "(no exits)"
+            lines.append(f'room/{node}.c: "{label}" -> {exit_str}')
+        lines.append("")
+
+    # Summary
+    lines.append(sep)
+    lines.append("ROOM COUNT SUMMARY")
+    lines.append(sep)
+    lines.append("")
+    for region_key, region_title in region_order:
+        if region_key in rooms_by_region:
+            count = len(rooms_by_region[region_key])
+            lines.append(f"  {region_title}: {count} rooms")
+    lines.append(f"\n  Total: {len(G.nodes)} rooms")
+    lines.append("")
+
+    with open(out_path, "w") as f:
+        f.write("\n".join(lines))
+    print(f"Connectivity saved to {os.path.abspath(out_path)}")
+
+
+def generate_world_map_txt(G, pos, out_dir):
+    """Generate a simplified world-map.txt with region layout info."""
+    os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.join(out_dir, "world-map.txt")
+
+    sep = "=" * 79
+
+    lines = []
+    lines.append(sep)
+    lines.append(f"{'LPmud 2.4.5 World Map':^79}")
+    lines.append(f"{'~' + str(len(G.nodes)) + ' rooms (auto-discovered)':^79}")
+    lines.append(sep)
+    lines.append("")
+    lines.append("This file is auto-generated by scripts/generate-map.py.")
+    lines.append("See world-map.png for the graphical version.")
+    lines.append("")
+
+    # List regions with their rooms
+    rooms_by_region = defaultdict(list)
+    for node in sorted(G.nodes):
+        region = G.nodes[node].get("region", "special")
+        rooms_by_region[region].append(node)
+
+    region_order = [
+        ("special",      "SPECIAL ROOMS"),
+        ("mountains",    "MOUNTAINS"),
+        ("mines",        "MINES"),
+        ("plains",       "THE GREAT PLAINS"),
+        ("giants",       "GIANT TERRITORY"),
+        ("orcs",         "ORC VALLEY"),
+        ("forest",       "FOREST"),
+        ("deep_forest",  "DEEP FOREST"),
+        ("village",      "VILLAGE"),
+        ("elevator",     "ELEVATOR SYSTEM"),
+        ("east_road",    "EAST ROAD"),
+        ("sea",          "JETTY & SEA"),
+        ("underground",  "UNDERGROUND"),
+        ("south_forest", "DIMLY LIT FOREST"),
+        ("shore",        "CRESCENT LAKE SHORE"),
+        ("island",       "ISLE OF THE MAGI"),
+    ]
+
+    for region_key, region_title in region_order:
+        if region_key not in rooms_by_region:
+            continue
+        nodes = rooms_by_region[region_key]
+        lines.append(f"=== {region_title} ({len(nodes)} rooms) ===")
+        lines.append("")
+        for node in sorted(nodes):
+            label = G.nodes[node].get("label", node)
+            neighbors = sorted(G.neighbors(node))
+            neighbor_str = ", ".join(neighbors) if neighbors else "(no exits)"
+            lines.append(f"  {node}: \"{label}\" -- {neighbor_str}")
+        lines.append("")
+
+    lines.append(sep)
+    lines.append(f"  Total rooms: {len(G.nodes)}")
+    lines.append(f"  Total connections: {len(G.edges)}")
+    lines.append(sep)
+
+    with open(out_path, "w") as f:
+        f.write("\n".join(lines))
+    print(f"Text map saved to {os.path.abspath(out_path)}")
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate LPmud world map")
+    default_mudlib = os.path.join(os.path.dirname(__file__), "..", "mudlib")
+    default_output = os.path.join(os.path.dirname(__file__), "..", "docs")
+    parser.add_argument("--mudlib", default=default_mudlib,
+                        help="Path to mudlib directory")
+    parser.add_argument("--output", default=default_output,
+                        help="Output directory for generated files")
+    args = parser.parse_args()
+
+    mudlib_path = os.path.abspath(args.mudlib)
+    out_dir = os.path.abspath(args.output)
+
+    print(f"Scanning rooms in {mudlib_path}/room/ ...")
+    rooms, edges = discover_rooms(mudlib_path)
+    print(f"  Found {len(rooms)} rooms, {len(edges)} directed exits")
+
+    print("Building graph ...")
+    G = build_graph(rooms, edges)
+    print(f"  Graph: {len(G.nodes)} nodes, {len(G.edges)} edges")
+
+    print("Computing layout ...")
+    pos = compute_layout(G)
+
+    print("Rendering map ...")
+    render(G, pos, out_dir)
+
+    print("Generating text files ...")
+    generate_connectivity_txt(G, edges, out_dir)
+    generate_world_map_txt(G, pos, out_dir)
+
+    print("Done!")
 
 
 if __name__ == "__main__":
-    render()
+    main()
