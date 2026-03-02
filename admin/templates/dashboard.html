@@ -8,7 +8,39 @@
 </div>
 
 <div class="card-grid">
-  <div class="card">
+  <div class="card card-grid-item">
+    <div class="card-header">Game Server</div>
+    {% if not server_info.available %}
+    <div class="stat-value"><span class="badge badge-warning">Unavailable</span></div>
+    <div class="stat-label">Docker connection not available</div>
+    {% elif server_info.running %}
+    <div class="stat-value"><span class="badge badge-success">Running</span></div>
+    <div class="stat-label">
+      <div class="btn-group">
+        <form method="post" action="{{ url_for('server.stop_server') }}" style="display:inline"
+              onsubmit="return confirm('Stop the game server?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-danger">Stop</button>
+        </form>
+        <form method="post" action="{{ url_for('server.restart_server') }}" style="display:inline"
+              onsubmit="return confirm('Restart the game server?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm">Restart</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div class="stat-value"><span class="badge badge-error">{{ server_info.status|capitalize }}</span></div>
+    <div class="stat-label">
+      <form method="post" action="{{ url_for('server.start_server') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-sm btn-primary">Start</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card card-grid-item">
     <div class="card-header">World Map</div>
     {% if map_info.exists %}
     <div class="stat-value">Available</div>
@@ -19,13 +51,13 @@
     {% endif %}
   </div>
 
-  <div class="card">
+  <div class="card card-grid-item">
     <div class="card-header">Rooms</div>
     <div class="stat-value">{{ room_count }}</div>
     <div class="stat-label">Room files in mudlib/room/</div>
   </div>
 
-  <div class="card">
+  <div class="card card-grid-item">
     <div class="card-header">Backups</div>
     <div class="stat-value">{{ backup_info.count }}</div>
     <div class="stat-label">
@@ -37,7 +69,7 @@
     </div>
   </div>
 
-  <div class="card">
+  <div class="card card-grid-item">
     <div class="card-header">Scheduler</div>
     {% if scheduler_info.active %}
     <div class="stat-value"><span class="badge badge-success">Active</span></div>

@@ -39,9 +39,13 @@ services:
       - ../scripts:/scripts:ro
       - lpmud-backups:/backups
       - lpmud-admin-data:/admin-data
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
+      - LPMUD_CONTAINER_NAME=lpmud-server
+    group_add:
+      - "${DOCKER_GID:-0}"
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

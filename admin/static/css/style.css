@@ -187,6 +187,22 @@ a:hover { text-decoration: underline; }
   gap: 1rem;
 }
 
+.card-grid .card + .card {
+  margin-top: 0;
+}
+
+/* Dashboard grid cards: uniform sizing via flexbox */
+.card-grid-item {
+  display: flex;
+  flex-direction: column;
+  height: 160px;
+  overflow: hidden;
+}
+
+.card-grid-item .stat-label {
+  margin-top: auto;
+}
+
 /* ===== Stat Cards ===== */
 .stat-value {
   font-size: 1.5rem;
@@ -318,6 +334,29 @@ select {
   transition: border-color 0.15s;
 }
 
+input[type="file"] {
+  font-size: 0.875rem;
+  color: var(--fg);
+  padding: 0.4rem 0;
+}
+
+input[type="file"]::file-selector-button {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  margin-right: 0.5rem;
+  transition: background 0.15s;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--surface-hover);
+}
+
 input:focus, select:focus {
   outline: none;
   border-color: var(--primary);
@@ -436,6 +475,7 @@ input:focus, select:focus {
 .badge-success { background: var(--flash-success-bg); color: var(--flash-success-fg); }
 .badge-warning { background: var(--flash-warning-bg); color: var(--flash-warning-fg); }
 .badge-info    { background: var(--flash-info-bg);     color: var(--flash-info-fg); }
+.badge-error   { background: var(--flash-error-bg);    color: var(--flash-error-fg); }
 
 /* ===== Empty State ===== */
 .empty-state {
@@ -445,6 +485,15 @@ input:focus, select:focus {
 }
 
 /* ===== Responsive ===== */
+
+/* Tablet: 2-column grid */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
   .layout {
     flex-direction: column;

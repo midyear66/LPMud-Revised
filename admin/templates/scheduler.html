@@ -8,7 +8,7 @@
 </div>
 
 <div class="card-grid">
-  <div class="card">
+  <div class="card card-grid-item">
     <div class="card-header">Map Status</div>
     {% if needs_regen %}
     <div class="stat-value"><span class="badge badge-warning">Stale</span></div>
@@ -19,7 +19,7 @@
     {% endif %}
   </div>
 
-  <div class="card">
+  <div class="card card-grid-item">
     <div class="card-header">Current Schedule</div>
     {% if schedule_info %}
     <div class="stat-value">{{ schedule_info.hour }}:{{ schedule_info.minute }}</div>

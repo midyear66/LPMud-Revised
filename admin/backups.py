@@ -1,30 +1,33 @@
-"""Backups blueprint: create, list, download, restore, delete tar.gz archives."""
+"""Backups blueprint: create, list, download, restore, delete, and import tar.gz archives."""
 
 import os
 import re
 import tarfile
 import glob
+import shutil
+import tempfile
 from datetime import datetime
 
 from flask import (
     Blueprint, render_template, request, redirect,
     url_for, flash, current_app, send_file, abort,
 )
+from werkzeug.utils import secure_filename
 
 from auth import login_required
 
 backups_bp = Blueprint("backups", __name__, url_prefix="/backups")
 
-# Allowed backup targets mapped to container paths
-TARGETS = {
-    "mudlib": {"config_key": "MUDLIB_PATH", "label": "Mudlib (room files, objects)"},
-    "saves": {"config_key": "SAVE_PATH", "label": "Player saves"},
-    "logs": {"config_key": "LOG_PATH", "label": "Server logs"},
-}
-
 # Filename safety: only alphanumeric, hyphens, underscores
 _SAFE_LABEL_RE = re.compile(r"^[a-zA-Z0-9_-]{0,50}$")
 _SAFE_FILENAME_RE = re.compile(r"^[a-zA-Z0-9_.-]+$")
+
+# Components included in every full backup
+_BACKUP_COMPONENTS = {
+    "mudlib": "MUDLIB_PATH",
+    "saves": "SAVE_PATH",
+    "logs": "LOG_PATH",
+}
 
 
 def _backup_dir() -> str:
@@ -61,12 +64,8 @@ def _list_backups() -> list[dict]:
     for f in files:
         name = os.path.basename(f)
         stat = os.stat(f)
-        # Parse target from filename: {target}_{timestamp}_{label}.tar.gz
-        parts = name.replace(".tar.gz", "").split("_", 2)
-        target = parts[0] if parts else "unknown"
         backups.append({
             "name": name,
-            "target": target,
             "time": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
             "size": _format_size(stat.st_size),
             "size_bytes": stat.st_size,
@@ -78,31 +77,18 @@ def _list_backups() -> list[dict]:
 @login_required
 def backups_list():
     backups = _list_backups()
-    return render_template("backups.html", backups=backups, targets=TARGETS)
+    return render_template("backups.html", backups=backups)
 
 
 @backups_bp.route("/create", methods=["POST"])
 @login_required
 def create_backup():
-    target = request.form.get("target", "")
     label = request.form.get("label", "").strip()
-
-    # Validate target
-    if target not in TARGETS:
-        flash("Invalid backup target.", "error")
-        return redirect(url_for("backups.backups_list"))
-
-    # Validate and sanitize label
-    # Strip to alphanumeric + hyphens
     label = re.sub(r"[^a-zA-Z0-9_-]", "", label)[:50]
 
-    source_path = current_app.config[TARGETS[target]["config_key"]]
-    if not os.path.isdir(source_path):
-        flash(f"Source directory not found: {source_path}", "error")
-        return redirect(url_for("backups.backups_list"))
-
+    cfg = current_app.config
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    parts = [target, timestamp]
+    parts = ["full", timestamp]
     if label:
         parts.append(label)
     filename = "_".join(parts) + ".tar.gz"
@@ -110,10 +96,15 @@ def create_backup():
 
     try:
         with tarfile.open(dest, "w:gz") as tar:
-            tar.add(source_path, arcname=os.path.basename(source_path))
+            for component, config_key in _BACKUP_COMPONENTS.items():
+                source_path = cfg[config_key]
+                if os.path.isdir(source_path):
+                    tar.add(source_path, arcname=component)
         flash(f"Backup created: {filename}", "success")
     except Exception as e:
         flash(f"Backup failed: {e}", "error")
+        if os.path.exists(dest):
+            os.remove(dest)
 
     return redirect(url_for("backups.backups_list"))
 
@@ -124,7 +115,6 @@ def download_backup(filename):
     if not _validate_filename(filename):
         abort(400)
     filepath = os.path.join(_backup_dir(), filename)
-    # Ensure the resolved path is within the backup directory
     real_backup_dir = os.path.realpath(_backup_dir())
     real_filepath = os.path.realpath(filepath)
     if not real_filepath.startswith(real_backup_dir + os.sep):
@@ -153,35 +143,91 @@ def restore_backup():
         flash("Backup file not found.", "error")
         return redirect(url_for("backups.backups_list"))
 
-    # Determine target from filename
-    parts = os.path.basename(filename).replace(".tar.gz", "").split("_", 2)
-    target = parts[0] if parts else ""
-    if target not in TARGETS:
-        flash("Cannot determine restore target from filename.", "error")
-        return redirect(url_for("backups.backups_list"))
-
-    dest_path = current_app.config[TARGETS[target]["config_key"]]
-    dest_parent = os.path.dirname(dest_path)
+    cfg = current_app.config
+    tmp_dir = tempfile.mkdtemp(prefix="lpmud_restore_")
 
     try:
+        # Extract archive to temp directory
         with tarfile.open(real_filepath, "r:gz") as tar:
-            # CVE-2007-4559 mitigation: use data_filter (Python 3.12+)
             if hasattr(tarfile, "data_filter"):
-                tar.extractall(path=dest_parent, filter="data")
+                tar.extractall(path=tmp_dir, filter="data")
             else:
-                # Fallback: manually validate each member
                 for member in tar.getmembers():
-                    member_path = os.path.join(dest_parent, member.name)
+                    member_path = os.path.join(tmp_dir, member.name)
                     real_member = os.path.realpath(member_path)
-                    real_dest = os.path.realpath(dest_parent)
-                    if not real_member.startswith(real_dest + os.sep):
+                    real_tmp = os.path.realpath(tmp_dir)
+                    if not real_member.startswith(real_tmp + os.sep):
                         raise ValueError(
                             f"Path traversal detected in archive: {member.name}"
                         )
-                tar.extractall(path=dest_parent)
-        flash(f"Restored {filename} to {dest_path}", "success")
+                tar.extractall(path=tmp_dir)
+
+        # Copy each component to its destination if present in archive
+        restored = []
+        for component, config_key in _BACKUP_COMPONENTS.items():
+            extracted = os.path.join(tmp_dir, component)
+            if os.path.isdir(extracted):
+                dest_path = cfg[config_key]
+                if os.path.isdir(dest_path):
+                    shutil.rmtree(dest_path)
+                shutil.copytree(extracted, dest_path)
+                restored.append(component)
+
+        if restored:
+            flash(f"Restored {', '.join(restored)} from {filename}", "success")
+        else:
+            flash(f"No recognized components found in {filename}.", "warning")
     except Exception as e:
         flash(f"Restore failed: {e}", "error")
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    return redirect(url_for("backups.backups_list"))
+
+
+@backups_bp.route("/import", methods=["POST"])
+@login_required
+def import_backup():
+    if "file" not in request.files:
+        flash("No file selected.", "error")
+        return redirect(url_for("backups.backups_list"))
+
+    uploaded = request.files["file"]
+    if not uploaded.filename:
+        flash("No file selected.", "error")
+        return redirect(url_for("backups.backups_list"))
+
+    original = secure_filename(uploaded.filename)
+    if not original.endswith(".tar.gz"):
+        flash("Only .tar.gz files are accepted.", "error")
+        return redirect(url_for("backups.backups_list"))
+
+    # Validate archive integrity by saving to a temp file first
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=".tar.gz")
+    try:
+        os.close(tmp_fd)
+        uploaded.save(tmp_path)
+
+        # Verify it's a valid tar.gz
+        with tarfile.open(tmp_path, "r:gz") as tar:
+            tar.getnames()
+
+        # Move to backup dir with import prefix
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_name = original.replace(".tar.gz", "")
+        safe_name = re.sub(r"[^a-zA-Z0-9_-]", "", base_name)[:50]
+        dest_name = f"imported_{timestamp}_{safe_name}.tar.gz"
+        dest_path = os.path.join(_backup_dir(), dest_name)
+
+        shutil.move(tmp_path, dest_path)
+        flash(f"Imported: {dest_name} — use Restore to apply it.", "success")
+    except tarfile.TarError:
+        flash("Invalid archive: file is not a valid .tar.gz.", "error")
+    except Exception as e:
+        flash(f"Import failed: {e}", "error")
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
     return redirect(url_for("backups.backups_list"))
 

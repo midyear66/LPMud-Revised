@@ -9,16 +9,11 @@
 
 <div class="card">
   <div class="card-header">Create Backup</div>
+  <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 0.75rem;">
+    Creates a full archive of mudlib, player saves, and logs.
+  </p>
   <form method="post" action="{{ url_for('backups.create_backup') }}" class="form-inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="form-group">
-      <label for="target">Target</label>
-      <select id="target" name="target" style="width: auto;">
-        {% for key, info in targets.items() %}
-        <option value="{{ key }}">{{ info.label }}</option>
-        {% endfor %}
-      </select>
-    </div>
     <div class="form-group">
       <label for="label">Label <span style="opacity:0.5">(optional)</span></label>
       <input type="text" id="label" name="label" placeholder="e.g. before-update"
@@ -31,6 +26,24 @@
 </div>
 
 <div class="card">
+  <div class="card-header">Import Backup</div>
+  <p style="font-size: 0.8rem; opacity: 0.6; margin-bottom: 0.75rem;">
+    Upload a .tar.gz backup archive (max 500 MB). Use Restore to apply it after importing.
+  </p>
+  <form method="post" action="{{ url_for('backups.import_backup') }}"
+        enctype="multipart/form-data" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="file">Backup file</label>
+      <input type="file" id="file" name="file" accept=".tar.gz,.gz">
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary">Upload</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
   <div class="card-header">Backup Archives</div>
   {% if backups %}
   <div class="table-wrap">
@@ -38,7 +51,6 @@
       <thead>
         <tr>
           <th>Filename</th>
-          <th>Target</th>
           <th>Date</th>
           <th>Size</th>
           <th>Actions</th>
@@ -48,7 +60,6 @@
         {% for b in backups %}
         <tr>
           <td>{{ b.name }}</td>
-          <td><span class="badge badge-info">{{ b.target }}</span></td>
           <td>{{ b.time }}</td>
           <td>{{ b.size }}</td>
           <td>
@@ -57,7 +68,7 @@
                  class="btn btn-sm">Download</a>
               <form method="post" action="{{ url_for('backups.restore_backup') }}"
                     style="display:inline"
-                    onsubmit="return confirm('Restore {{ b.name }}? This will overwrite current files.');">
+                    onsubmit="return confirm('Restore {{ b.name }}? This will overwrite mudlib, saves, and logs with the archive contents.');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="filename" value="{{ b.name }}">
                 <button type="submit" class="btn btn-sm">Restore</button>
