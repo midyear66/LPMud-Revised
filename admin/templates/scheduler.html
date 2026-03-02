@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Scheduler — LPmud Admin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1>Scheduler</h1>
+  <p>Manage automatic map regeneration</p>
+</div>
+
+<div class="card-grid">
+  <div class="card">
+    <div class="card-header">Map Status</div>
+    {% if needs_regen %}
+    <div class="stat-value"><span class="badge badge-warning">Stale</span></div>
+    <div class="stat-label">Room files have changed since the map was last generated</div>
+    {% else %}
+    <div class="stat-value"><span class="badge badge-success">Up to date</span></div>
+    <div class="stat-label">Map reflects the current room files</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-header">Current Schedule</div>
+    {% if schedule_info %}
+    <div class="stat-value">{{ schedule_info.hour }}:{{ schedule_info.minute }}</div>
+    <div class="stat-label">Daily — next run: {{ schedule_info.next_run }}</div>
+    {% else %}
+    <div class="stat-value" style="opacity:0.4">None</div>
+    <div class="stat-label">No schedule configured</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">Set Daily Schedule</div>
+  <form method="post" action="{{ url_for('scheduler.set_schedule') }}" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="hour">Hour (0-23)</label>
+      <input type="number" id="hour" name="hour" min="0" max="23"
+             value="{{ schedule_info.hour if schedule_info else '2' }}" style="width: 80px;">
+    </div>
+    <div class="form-group">
+      <label for="minute">Minute (0-59)</label>
+      <input type="number" id="minute" name="minute" min="0" max="59"
+             value="{{ schedule_info.minute if schedule_info else '0' }}" style="width: 80px;">
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary">Set Schedule</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">Actions</div>
+  <div class="btn-group">
+    <form method="post" action="{{ url_for('scheduler.run_now') }}" style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-primary"
+              onclick="this.disabled=true; this.textContent='Generating...'; this.form.submit();">
+        Generate Map Now
+      </button>
+    </form>
+    {% if schedule_info %}
+    <form method="post" action="{{ url_for('scheduler.remove_schedule') }}" style="display:inline"
+          onsubmit="return confirm('Remove the current schedule?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger">Remove Schedule</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

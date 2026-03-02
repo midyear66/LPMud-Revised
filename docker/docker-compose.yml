@@ -24,6 +24,32 @@ services:
     entrypoint: ["sh", "-c", "pip install -q -r /scripts/requirements.txt && python3 /scripts/generate-map.py --mudlib /mud/lib --output /docs"]
     profiles: ["tools"]
 
+  admin:
+    build:
+      context: ..
+      dockerfile: admin/Dockerfile
+    container_name: lpmud-admin
+    ports:
+      - "8080:8080"              # Use 127.0.0.1:8080:8080 in production
+    volumes:
+      - ../mudlib:/mud/lib:ro    # Read-only — can backup but not modify
+      - lpmud-save:/mud/save
+      - lpmud-logs:/mud/log
+      - ../docs:/docs
+      - ../scripts:/scripts:ro
+      - lpmud-backups:/backups
+      - lpmud-admin-data:/admin-data
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    depends_on:
+      - lpmud
+
 volumes:
   lpmud-logs:
   lpmud-save:
+  lpmud-backups:
+  lpmud-admin-data:
