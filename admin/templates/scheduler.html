@@ -4,7 +4,7 @@
 {% block content %}
 <div class="page-header">
   <h1>Scheduler</h1>
-  <p>Manage automatic map regeneration</p>
+  <p>Manage automatic map regeneration and backups</p>
 </div>
 
 <div class="card-grid">
@@ -20,33 +20,64 @@
   </div>
 
   <div class="card card-grid-item">
-    <div class="card-header">Current Schedule</div>
+    <div class="card-header">Map Schedule</div>
     {% if schedule_info %}
     <div class="stat-value">{{ schedule_info.hour }}:{{ schedule_info.minute }}</div>
     <div class="stat-label">Daily — next run: {{ schedule_info.next_run }}</div>
     {% else %}
     <div class="stat-value" style="opacity:0.4">None</div>
-    <div class="stat-label">No schedule configured</div>
+    <div class="stat-label">No map schedule configured</div>
+    {% endif %}
+  </div>
+
+  <div class="card card-grid-item">
+    <div class="card-header">Backup Schedule</div>
+    {% if backup_schedule_info %}
+    <div class="stat-value">{{ backup_schedule_info.hour }}:{{ backup_schedule_info.minute }}</div>
+    <div class="stat-label">Daily — next run: {{ backup_schedule_info.next_run }}</div>
+    {% else %}
+    <div class="stat-value" style="opacity:0.4">None</div>
+    <div class="stat-label">No backup schedule configured</div>
     {% endif %}
   </div>
 </div>
 
 <div class="card">
-  <div class="card-header">Set Daily Schedule</div>
+  <div class="card-header">Set Daily Map Schedule</div>
   <form method="post" action="{{ url_for('scheduler.set_schedule') }}" class="form-inline">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="form-group">
-      <label for="hour">Hour (0-23)</label>
-      <input type="number" id="hour" name="hour" min="0" max="23"
+      <label for="map_hour">Hour (0-23)</label>
+      <input type="number" id="map_hour" name="hour" min="0" max="23"
              value="{{ schedule_info.hour if schedule_info else '2' }}" style="width: 80px;">
     </div>
     <div class="form-group">
-      <label for="minute">Minute (0-59)</label>
-      <input type="number" id="minute" name="minute" min="0" max="59"
+      <label for="map_minute">Minute (0-59)</label>
+      <input type="number" id="map_minute" name="minute" min="0" max="59"
              value="{{ schedule_info.minute if schedule_info else '0' }}" style="width: 80px;">
     </div>
     <div class="form-group">
-      <button type="submit" class="btn btn-primary">Set Schedule</button>
+      <button type="submit" class="btn btn-primary">Set Map Schedule</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">Set Daily Backup Schedule</div>
+  <form method="post" action="{{ url_for('scheduler.set_backup_schedule') }}" class="form-inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="backup_hour">Hour (0-23)</label>
+      <input type="number" id="backup_hour" name="hour" min="0" max="23"
+             value="{{ backup_schedule_info.hour if backup_schedule_info else '3' }}" style="width: 80px;">
+    </div>
+    <div class="form-group">
+      <label for="backup_minute">Minute (0-59)</label>
+      <input type="number" id="backup_minute" name="minute" min="0" max="59"
+             value="{{ backup_schedule_info.minute if backup_schedule_info else '0' }}" style="width: 80px;">
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary">Set Backup Schedule</button>
     </div>
   </form>
 </div>
@@ -61,11 +92,25 @@
         Generate Map Now
       </button>
     </form>
+    <form method="post" action="{{ url_for('scheduler.run_backup_now') }}" style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-primary"
+              onclick="this.disabled=true; this.textContent='Creating Backup...'; this.form.submit();">
+        Create Backup Now
+      </button>
+    </form>
     {% if schedule_info %}
     <form method="post" action="{{ url_for('scheduler.remove_schedule') }}" style="display:inline"
-          onsubmit="return confirm('Remove the current schedule?');">
+          onsubmit="return confirm('Remove the map schedule?');">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-danger">Remove Schedule</button>
+      <button type="submit" class="btn btn-danger">Remove Map Schedule</button>
+    </form>
+    {% endif %}
+    {% if backup_schedule_info %}
+    <form method="post" action="{{ url_for('scheduler.remove_backup_schedule') }}" style="display:inline"
+          onsubmit="return confirm('Remove the backup schedule?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-danger">Remove Backup Schedule</button>
     </form>
     {% endif %}
   </div>

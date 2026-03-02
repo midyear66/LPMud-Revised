@@ -1,8 +1,9 @@
-"""Scheduler blueprint: APScheduler cron UI for map regeneration."""
+"""Scheduler blueprint: APScheduler cron UI for map regeneration and backups."""
 
 import os
 import subprocess
 import sys
+import tarfile
 from datetime import datetime
 
 from flask import (
@@ -19,6 +20,7 @@ scheduler_bp = Blueprint("scheduler", __name__, url_prefix="/scheduler")
 
 _scheduler: BackgroundScheduler | None = None
 MAP_JOB_ID = "map_regeneration"
+BACKUP_JOB_ID = "daily_backup"
 
 
 def get_scheduler() -> BackgroundScheduler | None:
@@ -105,28 +107,76 @@ def _scheduled_job():
         _run_map_generation(app_config)
 
 
+def _run_backup(app_config=None):
+    """Create a tar.gz backup of mudlib, saves, and logs."""
+    if app_config is None:
+        from flask import current_app
+        app_config = current_app.config
+
+    from backups import _BACKUP_COMPONENTS
+
+    backup_dir = app_config.get("BACKUP_PATH", "/backups")
+    os.makedirs(backup_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"scheduled_{timestamp}.tar.gz"
+    dest = os.path.join(backup_dir, filename)
+
+    try:
+        with tarfile.open(dest, "w:gz") as tar:
+            for component, config_key in _BACKUP_COMPONENTS.items():
+                source_path = app_config[config_key]
+                if os.path.isdir(source_path):
+                    tar.add(source_path, arcname=component)
+    except Exception:
+        if os.path.exists(dest):
+            os.remove(dest)
+        raise
+
+    return filename
+
+
+def _scheduled_backup_job():
+    """Job function called by APScheduler — creates a scheduled backup."""
+    from config import Config
+    app_config = {
+        "MUDLIB_PATH": Config.MUDLIB_PATH,
+        "SAVE_PATH": Config.SAVE_PATH,
+        "LOG_PATH": Config.LOG_PATH,
+        "BACKUP_PATH": Config.BACKUP_PATH,
+    }
+    _run_backup(app_config)
+
+
+def _extract_cron_info(job):
+    """Extract hour, minute, and next_run from an APScheduler CronTrigger job."""
+    if not job or not job.next_run_time:
+        return None
+    trigger = job.trigger
+    hour = minute = "?"
+    if isinstance(trigger, CronTrigger):
+        for field in trigger.fields:
+            if field.name == "hour":
+                hour = str(field)
+            elif field.name == "minute":
+                minute = str(field)
+    return {
+        "hour": hour,
+        "minute": minute,
+        "next_run": job.next_run_time.strftime("%Y-%m-%d %H:%M"),
+    }
+
+
 @scheduler_bp.route("/")
 @login_required
 def scheduler_view():
     sched = get_scheduler()
-    job = sched.get_job(MAP_JOB_ID) if sched else None
 
-    schedule_info = None
-    if job and job.next_run_time:
-        trigger = job.trigger
-        # Extract hour/minute from CronTrigger
-        hour = minute = "?"
-        if isinstance(trigger, CronTrigger):
-            for field in trigger.fields:
-                if field.name == "hour":
-                    hour = str(field)
-                elif field.name == "minute":
-                    minute = str(field)
-        schedule_info = {
-            "hour": hour,
-            "minute": minute,
-            "next_run": job.next_run_time.strftime("%Y-%m-%d %H:%M"),
-        }
+    map_job = sched.get_job(MAP_JOB_ID) if sched else None
+    schedule_info = _extract_cron_info(map_job)
+
+    backup_job = sched.get_job(BACKUP_JOB_ID) if sched else None
+    backup_schedule_info = _extract_cron_info(backup_job)
 
     # Check if map needs regeneration
     needs_regen = _needs_regeneration(current_app.config)
@@ -134,6 +184,7 @@ def scheduler_view():
     return render_template(
         "scheduler.html",
         schedule_info=schedule_info,
+        backup_schedule_info=backup_schedule_info,
         needs_regen=needs_regen,
     )
 
@@ -202,5 +253,69 @@ def run_now():
         flash(str(e), "error")
     except Exception as e:
         flash(f"Unexpected error: {e}", "error")
+
+    return redirect(url_for("scheduler.scheduler_view"))
+
+
+# --- Backup schedule routes ---
+
+
+@scheduler_bp.route("/set-backup", methods=["POST"])
+@login_required
+def set_backup_schedule():
+    try:
+        hour = int(request.form.get("hour", "3"))
+        minute = int(request.form.get("minute", "0"))
+    except ValueError:
+        flash("Hour and minute must be integers.", "error")
+        return redirect(url_for("scheduler.scheduler_view"))
+
+    if not (0 <= hour <= 23):
+        flash("Hour must be between 0 and 23.", "error")
+        return redirect(url_for("scheduler.scheduler_view"))
+    if not (0 <= minute <= 59):
+        flash("Minute must be between 0 and 59.", "error")
+        return redirect(url_for("scheduler.scheduler_view"))
+
+    sched = get_scheduler()
+    if not sched:
+        flash("Scheduler not initialized.", "error")
+        return redirect(url_for("scheduler.scheduler_view"))
+
+    if sched.get_job(BACKUP_JOB_ID):
+        sched.remove_job(BACKUP_JOB_ID)
+
+    sched.add_job(
+        _scheduled_backup_job,
+        CronTrigger(hour=hour, minute=minute),
+        id=BACKUP_JOB_ID,
+        name="Daily Backup",
+        replace_existing=True,
+    )
+
+    flash(f"Backup schedule set: daily at {hour:02d}:{minute:02d}", "success")
+    return redirect(url_for("scheduler.scheduler_view"))
+
+
+@scheduler_bp.route("/remove-backup", methods=["POST"])
+@login_required
+def remove_backup_schedule():
+    sched = get_scheduler()
+    if sched and sched.get_job(BACKUP_JOB_ID):
+        sched.remove_job(BACKUP_JOB_ID)
+        flash("Backup schedule removed.", "success")
+    else:
+        flash("No backup schedule to remove.", "warning")
+    return redirect(url_for("scheduler.scheduler_view"))
+
+
+@scheduler_bp.route("/run-backup-now", methods=["POST"])
+@login_required
+def run_backup_now():
+    try:
+        filename = _run_backup(current_app.config)
+        flash(f"Backup created: {filename}", "success")
+    except Exception as e:
+        flash(f"Backup failed: {e}", "error")
 
     return redirect(url_for("scheduler.scheduler_view"))

@@ -2,8 +2,8 @@
 """Generate a graphical PNG world map for LPmud 2.4.5.
 
 Auto-discovers rooms by parsing mudlib/room/ .c files, builds a graph
-with NetworkX, lays out rooms using a region-seeded spring layout, and
-renders the map as a PNG with Pillow.
+with NetworkX, lays out rooms using a direction-faithful BFS grid layout
+(compass exits map to grid offsets), and renders the map as a PNG with Pillow.
 
 Also generates docs/room-connectivity.txt and docs/world-map.txt.
 
@@ -16,7 +16,7 @@ import math
 import os
 import re
 import sys
-from collections import defaultdict
+from collections import defaultdict, deque
 
 import networkx as nx
 from PIL import Image, ImageDraw, ImageFont
@@ -324,16 +324,40 @@ def discover_rooms(mudlib_path):
 # ---------------------------------------------------------------------------
 
 def build_graph(rooms, edges):
-    """Build a NetworkX graph from rooms and edges."""
+    """Build a NetworkX graph from rooms and edges.
+
+    Each edge stores a ``directions`` list — every directed exit label
+    (src→dst and dst→src) so the layout can pick the best compass bearing.
+    """
     G = nx.Graph()
 
     for room_id, (label, region) in rooms.items():
         G.add_node(room_id, label=label, region=region)
 
+    # Collect all directed exit labels per undirected pair
+    pair_dirs = defaultdict(list)  # (src, dst) -> [(direction, src)]
     for src, direction, dst in edges:
         if src in rooms and dst in rooms:
-            if not G.has_edge(src, dst):
-                G.add_edge(src, dst, direction=direction)
+            pair_dirs[(src, dst)].append((direction, src))
+            # Also store under the canonical undirected key
+            if src != dst:
+                pair_dirs[(dst, src)].append((direction, src))
+
+    added = set()
+    for src, direction, dst in edges:
+        if src in rooms and dst in rooms:
+            key = tuple(sorted((src, dst)))
+            if key not in added:
+                added.add(key)
+                # Merge all directed exits for this pair
+                all_dirs = {}
+                for d, origin in pair_dirs.get((src, dst), []):
+                    all_dirs[(d, origin)] = True
+                for d, origin in pair_dirs.get((dst, src), []):
+                    all_dirs[(d, origin)] = True
+                G.add_edge(src, dst,
+                           direction=direction,
+                           directions=list(all_dirs.keys()))
 
     return G
 
@@ -364,65 +388,266 @@ REGION_SEEDS = {
 
 MARGIN = 100
 
+# Direction-to-grid offsets (x, y) — y grows downward so north is -y
+DIRECTION_OFFSETS = {
+    "north":     ( 0, -1),
+    "south":     ( 0,  1),
+    "east":      ( 1,  0),
+    "west":      (-1,  0),
+    "northeast": ( 1, -1),
+    "southeast": ( 1,  1),
+    "southwest": (-1,  1),
+    "northwest": (-1, -1),
+}
 
-def compute_layout(G):
-    """Compute room positions using region-seeded spring layout."""
-    if len(G.nodes) == 0:
-        return {}
+VERTICAL_DIRECTIONS = {"up", "down"}
 
-    # Create initial positions based on region seeds
-    initial_pos = {}
-    region_counts = defaultdict(int)
+OPPOSITES = {
+    "north": "south", "south": "north",
+    "east": "west", "west": "east",
+    "northeast": "southwest", "southwest": "northeast",
+    "northwest": "southeast", "southeast": "northwest",
+    "up": "down", "down": "up",
+}
+
+
+def _best_direction(src, dst, G):
+    """Return the compass direction from *src* toward *dst*.
+
+    Looks at the ``directions`` list stored on the edge and picks the first
+    spatial (non-vertical) direction originating from *src*.  Falls back to the
+    opposite of a direction originating from *dst*, then to ``None``.
+    """
+    if not G.has_edge(src, dst):
+        return None
+    edge_data = G.edges[src, dst]
+    dirs = edge_data.get("directions", [])
+
+    # First pass: direction where the origin is src
+    for d, origin in dirs:
+        if origin == src and d in DIRECTION_OFFSETS:
+            return d
+
+    # Second pass: direction where origin is dst → use opposite
+    for d, origin in dirs:
+        if origin == dst and d in DIRECTION_OFFSETS:
+            opp = OPPOSITES.get(d)
+            if opp and opp in DIRECTION_OFFSETS:
+                return opp
+
+    # Third pass: any spatial direction at all
+    for d, _origin in dirs:
+        if d in DIRECTION_OFFSETS:
+            return d
+
+    return None
+
+
+def _spiral_search(target, occupied, prefer_dx=0, prefer_dy=0, max_radius=60):
+    """Find the nearest empty grid cell to *target*.
+
+    Searches in expanding rings, preferring cells in the direction given by
+    *(prefer_dx, prefer_dy)*.
+    """
+    tx, ty = target
+    if target not in occupied:
+        return target
+
+    for radius in range(1, max_radius):
+        best = None
+        best_score = float("inf")
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if abs(dx) != radius and abs(dy) != radius:
+                    continue  # Only check the ring perimeter
+                cell = (tx + dx, ty + dy)
+                if cell in occupied:
+                    continue
+                # Score: prefer cells in the intended direction
+                score = abs(dx) + abs(dy)  # Manhattan distance
+                if prefer_dx and dx * prefer_dx > 0:
+                    score -= 0.5
+                if prefer_dy and dy * prefer_dy > 0:
+                    score -= 0.5
+                if score < best_score:
+                    best_score = score
+                    best = cell
+        if best is not None:
+            return best
+
+    # Fallback (should never reach here with 218 rooms)
+    return (tx + max_radius, ty)
+
+
+def _multi_seed_bfs(G, edges_raw):
+    """Place rooms on a grid using multi-seed BFS that respects exit directions.
+
+    Returns:
+        grid_pos: dict[node -> (gx, gy)]  grid coordinates
+        vertical_edges: set of (u, v) tuples that are purely vertical connections
+    """
+    # Build directed exits lookup: (src, dst) -> [direction, ...]
+    directed_exits = defaultdict(list)
+    for src, direction, dst in edges_raw:
+        if src in G.nodes and dst in G.nodes:
+            directed_exits[(src, dst)].append(direction)
+
+    # Group nodes by region
     region_nodes = defaultdict(list)
-
     for node in G.nodes:
         region = G.nodes[node].get("region", "special")
         region_nodes[region].append(node)
 
+    # Find connected components
+    components = list(nx.connected_components(G))
+    main_component = max(components, key=len) if components else set()
+    singleton_components = [c for c in components if len(c) <= 2]
+
+    # Grid scale: map region seeds (0-1) to grid coordinates
+    GRID_W, GRID_H = 80, 60
+
+    # Pick one seed per region: highest-degree node in main component
+    seeds = []  # (node, gx, gy)
+    seeded_regions = set()
     for region, nodes in region_nodes.items():
-        cx, cy = REGION_SEEDS.get(region, (0.5, 0.5))
-        n = len(nodes)
-        for i, node in enumerate(nodes):
-            # Spread nodes in a small circle around the region center
-            if n > 1:
-                angle = 2 * math.pi * i / n
-                spread = 0.03 + 0.01 * min(n, 30) / 30
-                dx = spread * math.cos(angle)
-                dy = spread * math.sin(angle)
-            else:
-                dx, dy = 0, 0
-            initial_pos[node] = (cx + dx, cy + dy)
+        main_nodes = [n for n in nodes if n in main_component]
+        if not main_nodes:
+            continue
+        best = max(main_nodes, key=lambda n: G.degree(n))
+        sx, sy = REGION_SEEDS.get(region, (0.5, 0.5))
+        gx = int(sx * GRID_W)
+        gy = int(sy * GRID_H)
+        seeds.append((best, gx, gy))
+        seeded_regions.add(region)
 
-    # Run spring layout
-    pos = nx.spring_layout(
-        G,
-        pos=initial_pos,
-        k=2.0 / math.sqrt(max(len(G.nodes), 1)),
-        iterations=150,
-        seed=42,
-    )
+    # Place seeds and BFS
+    grid_pos = {}
+    occupied = {}  # (gx, gy) -> node
 
-    # Scale to canvas
-    if not pos:
+    # Sort seeds by degree descending so highest-connected regions anchor first
+    seeds.sort(key=lambda s: G.degree(s[0]), reverse=True)
+
+    queue = deque()
+    for node, gx, gy in seeds:
+        if node in grid_pos:
+            continue
+        cell = (gx, gy)
+        if cell in occupied:
+            cell = _spiral_search(cell, occupied)
+        grid_pos[node] = cell
+        occupied[cell] = node
+        queue.append(node)
+
+    # BFS from all seeds
+    vertical_edges = set()
+    while queue:
+        current = queue.popleft()
+        cx, cy = grid_pos[current]
+
+        for neighbor in G.neighbors(current):
+            if neighbor in grid_pos:
+                continue
+
+            direction = _best_direction(current, neighbor, G)
+
+            if direction is None:
+                # Non-spatial exit (special text like "elsewhere", "away")
+                # Place adjacent in any free cell
+                target = _spiral_search((cx, cy), occupied)
+                grid_pos[neighbor] = target
+                occupied[target] = neighbor
+                queue.append(neighbor)
+                continue
+
+            dx, dy = DIRECTION_OFFSETS[direction]
+            target = (cx + dx, cy + dy)
+
+            if target in occupied:
+                target = _spiral_search(target, occupied, prefer_dx=dx, prefer_dy=dy)
+
+            grid_pos[neighbor] = target
+            occupied[target] = neighbor
+            queue.append(neighbor)
+
+    # Track vertical-only edges
+    for u, v in G.edges:
+        all_dirs = []
+        for d, _origin in G.edges[u, v].get("directions", []):
+            all_dirs.append(d)
+        spatial = [d for d in all_dirs if d in DIRECTION_OFFSETS]
+        vertical = [d for d in all_dirs if d in VERTICAL_DIRECTIONS]
+        if vertical and not spatial:
+            vertical_edges.add((u, v))
+
+    # Place singleton/small components at their region seed positions
+    for comp in singleton_components:
+        for node in comp:
+            if node in grid_pos:
+                continue
+            region = G.nodes[node].get("region", "special")
+            sx, sy = REGION_SEEDS.get(region, (0.5, 0.5))
+            gx = int(sx * GRID_W)
+            gy = int(sy * GRID_H)
+            cell = _spiral_search((gx, gy), occupied)
+            grid_pos[node] = cell
+            occupied[cell] = node
+
+    # Place any remaining unvisited nodes (shouldn't happen, but safety net)
+    for node in G.nodes:
+        if node not in grid_pos:
+            region = G.nodes[node].get("region", "special")
+            sx, sy = REGION_SEEDS.get(region, (0.5, 0.5))
+            gx = int(sx * GRID_W)
+            gy = int(sy * GRID_H)
+            cell = _spiral_search((gx, gy), occupied)
+            grid_pos[node] = cell
+            occupied[cell] = node
+
+    return grid_pos, vertical_edges
+
+
+def _grid_to_pixels(grid_pos):
+    """Convert grid coordinates to pixel positions centered on the canvas."""
+    if not grid_pos:
         return {}
 
-    xs = [p[0] for p in pos.values()]
-    ys = [p[1] for p in pos.values()]
-    min_x, max_x = min(xs), max(xs)
-    min_y, max_y = min(ys), max(ys)
-    range_x = max_x - min_x if max_x != min_x else 1
-    range_y = max_y - min_y if max_y != min_y else 1
+    gxs = [p[0] for p in grid_pos.values()]
+    gys = [p[1] for p in grid_pos.values()]
+    min_gx, max_gx = min(gxs), max(gxs)
+    min_gy, max_gy = min(gys), max(gys)
+    range_gx = max_gx - min_gx if max_gx != min_gx else 1
+    range_gy = max_gy - min_gy if max_gy != min_gy else 1
 
     canvas_w = WIDTH - 2 * MARGIN
     canvas_h = HEIGHT - 2 * MARGIN
 
-    scaled = {}
-    for node, (x, y) in pos.items():
-        sx = MARGIN + int((x - min_x) / range_x * canvas_w)
-        sy = MARGIN + int((y - min_y) / range_y * canvas_h)
-        scaled[node] = (sx, sy)
+    # Use uniform scale to preserve direction angles
+    scale = min(canvas_w / range_gx, canvas_h / range_gy)
 
-    return scaled
+    # Center the map
+    used_w = range_gx * scale
+    used_h = range_gy * scale
+    offset_x = MARGIN + (canvas_w - used_w) / 2
+    offset_y = MARGIN + (canvas_h - used_h) / 2
+
+    pixel_pos = {}
+    for node, (gx, gy) in grid_pos.items():
+        px = int(offset_x + (gx - min_gx) * scale)
+        py = int(offset_y + (gy - min_gy) * scale)
+        pixel_pos[node] = (px, py)
+
+    return pixel_pos
+
+
+def compute_layout(G, edges_raw):
+    """Compute room positions using direction-faithful BFS grid layout."""
+    if len(G.nodes) == 0:
+        return {}, set()
+
+    grid_pos, vertical_edges = _multi_seed_bfs(G, edges_raw)
+    pixel_pos = _grid_to_pixels(grid_pos)
+
+    return pixel_pos, vertical_edges
 
 
 # ---------------------------------------------------------------------------
@@ -508,6 +733,20 @@ def draw_dashed_line(draw, x1, y1, x2, y2, color=(150, 150, 170, 120),
         draw.line([(sx, sy), (ex, ey)], fill=color, width=width)
 
 
+def draw_vertical_connection(draw, pos, id1, id2,
+                             color=(160, 100, 200, 200), width=2):
+    """Draw a dotted purple line for up/down connections with a ↕ indicator."""
+    if id1 not in pos or id2 not in pos:
+        return
+    x1, y1 = pos[id1]
+    x2, y2 = pos[id2]
+    draw_dashed_line(draw, x1, y1, x2, y2, color=color, width=width, steps=20)
+    # Draw ↕ indicator at midpoint
+    mx = (x1 + x2) // 2
+    my = (y1 + y2) // 2
+    draw.text((mx - 3, my - 6), "\u2195", fill=color, font=FONT_SMALL)
+
+
 # ---------------------------------------------------------------------------
 # Region label positions (computed from room positions)
 # ---------------------------------------------------------------------------
@@ -576,8 +815,10 @@ def find_long_connections(G, pos, threshold=500):
 # Main rendering
 # ---------------------------------------------------------------------------
 
-def render(G, pos, out_dir):
+def render(G, pos, out_dir, vertical_edges=None):
     """Render the world map PNG."""
+    if vertical_edges is None:
+        vertical_edges = set()
     img = Image.new("RGBA", (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img, "RGBA")
 
@@ -615,7 +856,9 @@ def render(G, pos, out_dir):
     long_edges = find_long_connections(G, pos)
     for u, v in G.edges:
         if u in pos and v in pos:
-            if (u, v) in long_edges or (v, u) in long_edges:
+            if (u, v) in vertical_edges or (v, u) in vertical_edges:
+                draw_vertical_connection(draw, pos, u, v)
+            elif (u, v) in long_edges or (v, u) in long_edges:
                 draw_dashed_line(draw, pos[u][0], pos[u][1],
                                  pos[v][0], pos[v][1])
             else:
@@ -681,7 +924,9 @@ def render(G, pos, out_dir):
 
     # Notes
     notes = [
+        "Solid line = direct connection",
         "Dashed line = distant connection",
+        "Dotted purple = up/down connection",
         "Rooms and connections auto-discovered from mudlib",
     ]
     ny = legend_y + len(items) * 22 + 15
@@ -878,10 +1123,10 @@ def main():
     print(f"  Graph: {len(G.nodes)} nodes, {len(G.edges)} edges")
 
     print("Computing layout ...")
-    pos = compute_layout(G)
+    pos, vertical_edges = compute_layout(G, edges)
 
     print("Rendering map ...")
-    render(G, pos, out_dir)
+    render(G, pos, out_dir, vertical_edges=vertical_edges)
 
     print("Generating text files ...")
     generate_connectivity_txt(G, edges, out_dir)
