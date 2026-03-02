@@ -24,8 +24,8 @@ from PIL import Image, ImageDraw, ImageFont
 # ---------------------------------------------------------------------------
 # Canvas
 # ---------------------------------------------------------------------------
-WIDTH = 4600
-HEIGHT = 3450
+WIDTH = 6000
+HEIGHT = 4500
 BG_COLOR = (25, 25, 35)
 
 # ---------------------------------------------------------------------------
@@ -390,14 +390,14 @@ MARGIN = 100
 
 # Direction-to-grid offsets (x, y) — y grows downward so north is -y
 DIRECTION_OFFSETS = {
-    "north":     ( 0, -1),
-    "south":     ( 0,  1),
-    "east":      ( 1,  0),
-    "west":      (-1,  0),
-    "northeast": ( 1, -1),
-    "southeast": ( 1,  1),
-    "southwest": (-1,  1),
-    "northwest": (-1, -1),
+    "north":     ( 0, -3),
+    "south":     ( 0,  3),
+    "east":      ( 3,  0),
+    "west":      (-3,  0),
+    "northeast": ( 3, -3),
+    "southeast": ( 3,  3),
+    "southwest": (-3,  3),
+    "northwest": (-3, -3),
 }
 
 VERTICAL_DIRECTIONS = {"up", "down"}
@@ -443,14 +443,25 @@ def _best_direction(src, dst, G):
     return None
 
 
-def _spiral_search(target, occupied, prefer_dx=0, prefer_dy=0, max_radius=60):
-    """Find the nearest empty grid cell to *target*.
+def _spiral_search(target, occupied, prefer_dx=0, prefer_dy=0, max_radius=120,
+                    min_clearance=2):
+    """Find the nearest empty grid cell to *target* with minimum clearance.
 
     Searches in expanding rings, preferring cells in the direction given by
-    *(prefer_dx, prefer_dy)*.
+    *(prefer_dx, prefer_dy)*.  Rejects any cell within Chebyshev distance
+    < *min_clearance* of any already-occupied cell.
     """
     tx, ty = target
-    if target not in occupied:
+
+    def _has_clearance(cell):
+        """Return True if *cell* is at least *min_clearance* away from all occupied cells."""
+        cx, cy = cell
+        for (ox, oy) in occupied:
+            if max(abs(cx - ox), abs(cy - oy)) < min_clearance:
+                return False
+        return True
+
+    if target not in occupied and _has_clearance(target):
         return target
 
     for radius in range(1, max_radius):
@@ -462,6 +473,8 @@ def _spiral_search(target, occupied, prefer_dx=0, prefer_dy=0, max_radius=60):
                     continue  # Only check the ring perimeter
                 cell = (tx + dx, ty + dy)
                 if cell in occupied:
+                    continue
+                if not _has_clearance(cell):
                     continue
                 # Score: prefer cells in the intended direction
                 score = abs(dx) + abs(dy)  # Manhattan distance
@@ -504,7 +517,7 @@ def _multi_seed_bfs(G, edges_raw):
     singleton_components = [c for c in components if len(c) <= 2]
 
     # Grid scale: map region seeds (0-1) to grid coordinates
-    GRID_W, GRID_H = 80, 60
+    GRID_W, GRID_H = 240, 180
 
     # Pick one seed per region: highest-degree node in main component
     seeds = []  # (node, gx, gy)
