@@ -158,6 +158,17 @@ crontab -e
 - **Multi-stage Docker build**: Keeps the runtime image small (~50MB) by separating build dependencies from the final image.
 - **Volume-mounted mudlib**: Allows live editing during development without rebuilding the container.
 
+## Credits & Acknowledgments
+
+This project builds on the work of many contributors to the LPmud ecosystem:
+
+- **Lars Pensjö** — Created the original LPmud driver and the 2.4.5 mudlib at Chalmers University, Gothenburg. His work introduced in-game LPC programming and spawned an entire family of MUD servers. All core mudlib code descends from his original codebase.
+- **[ldmud project](https://github.com/ldmud/ldmud)** — The modern, actively maintained LPmud driver used in this project, and the source of the pre-ported [lp-245](https://github.com/ldmud/ldmud/tree/master/mud/lp-245) mudlib fetched by `scripts/extract-mudlib.sh`.
+- **Anders Ripa ("Tech")** — Author of the roommaker (`mudlib/obj/roommaker.c`), quicktyper (`mudlib/obj/quicktyper.c`), and debug header (`mudlib/sys/debug.h`).
+- **Padrone** — Gender system modifications to `mudlib/obj/soul.c`.
+- **UC Berkeley** — BSD-licensed telnet protocol definitions in `mudlib/sys/telnet.h` (1983).
+- **[Genesis MUD](https://www.genesismud.org/)** — The first LPmud, founded at Chalmers University, Gothenburg, where this mudlib originated.
+
 ## References
 
 - [ldmud](https://github.com/ldmud/ldmud) — The game driver (direct descendant of original LPmud)
@@ -172,3 +183,13 @@ crontab -e
 ## Status
 
 Server builds and runs successfully. The 2.4.5 mudlib loads with some `transfer()` deprecation warnings (non-fatal). The game world is explorable and functional.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE). You are free to copy, modify, and distribute this code as long as the original copyright notice and permission notice are included.
+
+Note: Bundled third-party code retains its original licensing terms:
+
+- **ldmud driver & LPmud 2.4.5 mudlib** — BSD-like license with a **non-commercial restriction**: "may not be used in any way whatsoever for monetary gain." See the ldmud [COPYRIGHT](https://github.com/ldmud/ldmud/blob/master/COPYRIGHT) file for full terms.
+- **`mudlib/sys/telnet.h`** — Original BSD license (UC Berkeley, 1983).
+- **Anders Ripa's tools** (`roommaker.c`, `quicktyper.c`, `debug.h`) — Author-attributed, no formal license specified.
