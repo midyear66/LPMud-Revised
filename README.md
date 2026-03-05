@@ -198,7 +198,7 @@ docker compose -f docker/docker-compose.yml up -d admin
 |------|-------------|
 | **Dashboard** | Server overview — room count, player count, backup status, scheduler status |
 | **Map** | Interactive world map viewer (Leaflet.js with zoom/pan/drag) |
-| **Players** | Browse and edit player save files — stats, levels, inventory, flags |
+| **Players** | Browse, create, edit, and delete player save files — stats, levels, inventory, flags |
 | **Backups** | Create, download, restore, and delete tar.gz backups of mudlib, saves, or logs |
 | **Scheduler** | Set a daily schedule for automatic map regeneration, or run it on demand |
 

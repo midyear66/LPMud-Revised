@@ -51,7 +51,7 @@ void catch_tell(string str)
 	sscanf(str, "%s hi%s", a, b) == 2 ||
 	sscanf(str, "%s Hi%s", a, b) == 2){
 	next_out = "Welcome, " + from->query_name() + ".\n";
-	if (from->query_level() == 20)
+	if (from->query_level() >= 20)
 	    next_out = next_out +
 		"Now that you are a wizard, you can have a castle of your own.\n";
         delay=2;
@@ -61,7 +61,7 @@ void catch_tell(string str)
     }
     if (sscanf(str, "%sgive%scastle%s", a, b, c) == 3 ||
 	sscanf(str, "%swant%scastle%s", a, b, c) == 3) {
-	if (from->query_level() == 20) {
+	if (from->query_level() >= 20) {
 	    castle();
 	    return;
 	}
@@ -138,17 +138,22 @@ void castle2(string back_up_wiz) {
     back_up_wiz = lower_case(back_up_wiz);
     save_name = name;
     save_level = level;
-    if (!restore_object("players/" + back_up_wiz)) {
-	write("There is no player with that name.\n");
-	return;
-    }
-    name = save_name;
-    if (level < 20) {
-	write("That player is not full wizard !\n");
+    if (back_up_wiz == lower_case(this_player()->query_name())) {
+	name = save_name;
 	level = save_level;
-	return;
+    } else {
+	if (!restore_object("players/" + back_up_wiz)) {
+	    write("There is no player with that name.\n");
+	    return;
+	}
+	name = save_name;
+	if (level < 20) {
+	    write("That player is not full wizard !\n");
+	    level = save_level;
+	    return;
+	}
+	level = save_level;
     }
-    level = save_level;
     castle_name = clone_object("room/port_castle");
     player_name = this_player()->query_name();
     castle_name->set_owner(player_name);

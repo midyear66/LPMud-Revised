@@ -75,7 +75,6 @@ room/crop.c
 room/death/death.c
 room/death/death_room.c
 room/deep_forest1.c
-room/def_castle.c
 room/doorway.c
 room/eastroad1.c
 room/eastroad2.c
@@ -284,3 +283,5 @@ room/well.c
 room/wild1.c
 room/wiz_hall.c
 room/yard.c
+players/peace/castle.c
+players/peace/workshop.c

@@ -88,27 +88,27 @@
     <form method="post" action="{{ url_for('scheduler.run_now') }}" style="display:inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-primary"
-              onclick="this.disabled=true; this.textContent='Generating...'; this.form.submit();">
+              data-loading="Generating...">
         Generate Map Now
       </button>
     </form>
     <form method="post" action="{{ url_for('scheduler.run_backup_now') }}" style="display:inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-primary"
-              onclick="this.disabled=true; this.textContent='Creating Backup...'; this.form.submit();">
+              data-loading="Creating Backup...">
         Create Backup Now
       </button>
     </form>
     {% if schedule_info %}
     <form method="post" action="{{ url_for('scheduler.remove_schedule') }}" style="display:inline"
-          onsubmit="return confirm('Remove the map schedule?');">
+          data-confirm="Remove the map schedule?">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-danger">Remove Map Schedule</button>
     </form>
     {% endif %}
     {% if backup_schedule_info %}
     <form method="post" action="{{ url_for('scheduler.remove_backup_schedule') }}" style="display:inline"
-          onsubmit="return confirm('Remove the backup schedule?');">
+          data-confirm="Remove the backup schedule?">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-danger">Remove Backup Schedule</button>
     </form>

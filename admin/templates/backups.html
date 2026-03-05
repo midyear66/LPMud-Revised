@@ -68,14 +68,14 @@
                  class="btn btn-sm">Download</a>
               <form method="post" action="{{ url_for('backups.restore_backup') }}"
                     style="display:inline"
-                    onsubmit="return confirm('Restore {{ b.name }}? This will overwrite mudlib, saves, and logs with the archive contents.');">
+                    data-confirm="Restore {{ b.name }}? This will overwrite mudlib, saves, and logs with the archive contents.">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="filename" value="{{ b.name }}">
                 <button type="submit" class="btn btn-sm">Restore</button>
               </form>
               <form method="post" action="{{ url_for('backups.delete_backup') }}"
                     style="display:inline"
-                    onsubmit="return confirm('Delete {{ b.name }}? This cannot be undone.');">
+                    data-confirm="Delete {{ b.name }}? This cannot be undone.">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="filename" value="{{ b.name }}">
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>

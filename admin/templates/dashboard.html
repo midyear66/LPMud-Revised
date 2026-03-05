@@ -18,12 +18,12 @@
     <div class="stat-label">
       <div class="btn-group">
         <form method="post" action="{{ url_for('server.stop_server') }}" style="display:inline"
-              onsubmit="return confirm('Stop the game server?');">
+              data-confirm="Stop the game server?">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-sm btn-danger">Stop</button>
         </form>
         <form method="post" action="{{ url_for('server.restart_server') }}" style="display:inline"
-              onsubmit="return confirm('Restart the game server?');">
+              data-confirm="Restart the game server?">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <button type="submit" class="btn btn-sm">Restart</button>
         </form>

@@ -2,7 +2,34 @@
 {% block title %}Players — LPmud Admin{% endblock %}
 
 {% block content %}
-{% if editing %}
+{% if adding is defined and adding %}
+{# ===== Add Player Form ===== #}
+<div class="page-header">
+  <h1>
+    <a href="{{ url_for('players.players_list') }}" style="opacity:0.5; text-decoration:none;">&larr;</a>
+    Add Player
+  </h1>
+  <p>Create a new player save file with default values.</p>
+</div>
+
+<div class="card">
+  <div class="card-header">New Player</div>
+  <form method="post" action="{{ url_for('players.player_add') }}" style="padding: 1rem;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="player-name">Player Name</label>
+      <input type="text" id="player-name" name="name" pattern="[a-z][a-z0-9]{0,10}"
+             required placeholder="e.g. gandalf" style="max-width: 300px;">
+      <span class="field-desc">Lowercase letters and digits, starting with a letter (max 11 chars)</span>
+    </div>
+    <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+      <button type="submit" class="btn btn-primary">Create Player</button>
+      <a href="{{ url_for('players.players_list') }}" class="btn">Cancel</a>
+    </div>
+  </form>
+</div>
+
+{% elif editing %}
 {# ===== Player Editor ===== #}
 <div class="page-header">
   <h1>
@@ -55,9 +82,12 @@
 
 {% else %}
 {# ===== Player List ===== #}
-<div class="page-header">
-  <h1>Players</h1>
-  <p>View and edit player save files</p>
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h1>Players</h1>
+    <p>View and edit player save files</p>
+  </div>
+  <a href="{{ url_for('players.player_add') }}" class="btn btn-primary btn-sm">+ Add Player</a>
 </div>
 
 <div class="card">
@@ -84,7 +114,15 @@
           <td>{{ p.title }}</td>
           <td>{{ p.experience }}</td>
           <td>
-            <a href="{{ url_for('players.player_edit', name=p.name) }}" class="btn btn-sm">Edit</a>
+            <div class="btn-group">
+              <a href="{{ url_for('players.player_edit', name=p.name) }}" class="btn btn-sm">Edit</a>
+              <form method="post" action="{{ url_for('players.player_delete', name=p.name) }}"
+                    style="display:inline"
+                    data-confirm="Delete {{ p.name }}? This cannot be undone.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+              </form>
+            </div>
           </td>
         </tr>
         {% endfor %}

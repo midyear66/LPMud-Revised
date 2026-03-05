@@ -168,7 +168,50 @@ def players_list():
                         data.get("gender", "0"), "?"
                     ),
                 })
-    return render_template("players.html", players=players, editing=None)
+    return render_template("players.html", players=players, editing=None, adding=False)
+
+
+@players_bp.route("/players/add", methods=["GET", "POST"])
+@login_required
+def player_add():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip().lower()
+        if not _safe_filename(name):
+            flash("Invalid name. Use 1–11 lowercase letters/digits, starting with a letter.", "error")
+            return render_template("players.html", players=None, editing=None, adding=True)
+
+        path = os.path.join(_save_dir(), f"{name}.o")
+        if os.path.isfile(path):
+            flash(f"Player '{name}' already exists.", "error")
+            return render_template("players.html", players=None, editing=None, adding=True)
+
+        # Create minimal save file
+        with open(path, "w") as f:
+            f.write(f'name "{name}"\n')
+            f.write("level -1\n")
+            f.write("gender 0\n")
+
+        flash(f"Created player '{name}'.", "success")
+        return redirect(url_for("players.player_edit", name=name))
+
+    return render_template("players.html", players=None, editing=None, adding=True)
+
+
+@players_bp.route("/players/<name>/delete", methods=["POST"])
+@login_required
+def player_delete(name):
+    if not _safe_filename(name):
+        flash("Invalid player name.", "error")
+        return redirect(url_for("players.players_list"))
+
+    path = os.path.join(_save_dir(), f"{name}.o")
+    if not os.path.isfile(path):
+        flash(f"Player '{name}' not found.", "error")
+        return redirect(url_for("players.players_list"))
+
+    os.remove(path)
+    flash(f"Deleted player '{name}'.", "success")
+    return redirect(url_for("players.players_list"))
 
 
 @players_bp.route("/players/<name>")
@@ -206,6 +249,7 @@ def player_edit(name):
         "players.html",
         players=None,
         editing=name,
+        adding=False,
         field_groups=field_groups,
     )
 
