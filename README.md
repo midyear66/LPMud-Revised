@@ -8,6 +8,17 @@ Recreating a classic LPmud server using [ldmud](https://github.com/ldmud/ldmud) 
 
 This project runs the classic **2.4.5 mudlib** — the most widely used LPmud mudlib of the era — on top of **ldmud**, the modern direct descendant of the original LPmud driver.
 
+## Credits & Acknowledgments
+
+This project builds on the work of many contributors to the LPmud ecosystem:
+
+- **Lars Pensjö** — Created the original LPmud driver and the 2.4.5 mudlib at Chalmers University, Gothenburg. His work introduced in-game LPC programming and spawned an entire family of MUD servers. All core mudlib code descends from his original codebase.
+- **[ldmud project](https://github.com/ldmud/ldmud)** — The modern, actively maintained LPmud driver used in this project, and the source of the pre-ported [lp-245](https://github.com/ldmud/ldmud/tree/master/mud/lp-245) mudlib fetched by `scripts/extract-mudlib.sh`.
+- **Anders Ripa ("Tech")** — Author of the roommaker (`mudlib/obj/roommaker.c`), quicktyper (`mudlib/obj/quicktyper.c`), and debug header (`mudlib/sys/debug.h`).
+- **Padrone** — Gender system modifications to `mudlib/obj/soul.c`.
+- **UC Berkeley** — BSD-licensed telnet protocol definitions in `mudlib/sys/telnet.h` (1983).
+- **[Genesis MUD](https://www.genesismud.org/)** — The first LPmud, founded at Chalmers University, Gothenburg, where this mudlib originated.
+
 ## Architecture
 
 - **Driver**: [ldmud](https://github.com/ldmud/ldmud) 3.6.x, compiled from source in a multi-stage Docker build
@@ -231,17 +242,6 @@ docker compose -f docker/docker-compose.yml up -d admin
 - **`transfer()` warnings**: The 2.4.5 mudlib uses the deprecated `transfer()` efun extensively. These warnings are non-fatal and can be addressed later by creating a `simul_efun` wrapper.
 - **Multi-stage Docker build**: Keeps the runtime image small (~50MB) by separating build dependencies from the final image.
 - **Bind-mounted mudlib**: Host directories are bind-mounted into both containers. Both run as uid 1000 (matching the host user), so file permissions just work — no named volumes or group hacks needed.
-
-## Credits & Acknowledgments
-
-This project builds on the work of many contributors to the LPmud ecosystem:
-
-- **Lars Pensjö** — Created the original LPmud driver and the 2.4.5 mudlib at Chalmers University, Gothenburg. His work introduced in-game LPC programming and spawned an entire family of MUD servers. All core mudlib code descends from his original codebase.
-- **[ldmud project](https://github.com/ldmud/ldmud)** — The modern, actively maintained LPmud driver used in this project, and the source of the pre-ported [lp-245](https://github.com/ldmud/ldmud/tree/master/mud/lp-245) mudlib fetched by `scripts/extract-mudlib.sh`.
-- **Anders Ripa ("Tech")** — Author of the roommaker (`mudlib/obj/roommaker.c`), quicktyper (`mudlib/obj/quicktyper.c`), and debug header (`mudlib/sys/debug.h`).
-- **Padrone** — Gender system modifications to `mudlib/obj/soul.c`.
-- **UC Berkeley** — BSD-licensed telnet protocol definitions in `mudlib/sys/telnet.h` (1983).
-- **[Genesis MUD](https://www.genesismud.org/)** — The first LPmud, founded at Chalmers University, Gothenburg, where this mudlib originated.
 
 ## References
 
