@@ -84,6 +84,8 @@ lpmud/
 │   ├── build.sh            #   Build helper
 │   ├── extract-mudlib.sh   #   Re-fetch mudlib from ldmud repo
 │   └── generate-map.py     #   Generate world map from room files
+├── backups/                # Backup archives (bind-mounted, gitignored)
+├── admin-data/             # Admin persistent data (bind-mounted, gitignored)
 ├── .gitignore
 ├── CLAUDE.md               # AI assistant project context
 └── README.md               # This file
@@ -98,7 +100,7 @@ The ldmud driver is configured via `config/ldmud.conf` using the `--args` format
 | `--compat` | | Enable 2.4.5 compatibility mode |
 | `--mudlib` | `/mud/lib` | Path to mudlib inside container |
 | `--master` | `obj/master` | Master object (relative to mudlib) |
-| `--debug-file` | `/mud/log/debug.log` | Driver debug log location |
+| `--debug-file` | `/mud/lib/log/debug.log` | Driver debug log location |
 | `--max-array` | `5000` | Maximum array size |
 | `--max-mapping` | `5000` | Maximum mapping size |
 | `--max-bytes` | `100000` | Maximum byte transfer |
@@ -207,7 +209,7 @@ docker compose -f docker/docker-compose.yml up -d admin
 - Login rate limiting (5 attempts/minute, then 60-second lockout)
 - CSRF protection on all forms (Flask-WTF)
 - Security headers: CSP, X-Frame-Options, X-Content-Type-Options
-- Mudlib mounted read-only — admin can back up but not modify game files
+- Mudlib mounted read-write — admin can edit player saves directly
 - Container runs as non-root with `no-new-privileges`
 
 > **Production**: Bind to localhost only (`127.0.0.1:8080:8080` in docker-compose.yml) and put a reverse proxy (nginx/Caddy) with TLS in front.
@@ -218,7 +220,7 @@ docker compose -f docker/docker-compose.yml up -d admin
 - **Compat mode**: Required for the 2.4.5 mudlib. Modern ldmud defaults to "native" mode with different semantics.
 - **`transfer()` warnings**: The 2.4.5 mudlib uses the deprecated `transfer()` efun extensively. These warnings are non-fatal and can be addressed later by creating a `simul_efun` wrapper.
 - **Multi-stage Docker build**: Keeps the runtime image small (~50MB) by separating build dependencies from the final image.
-- **Volume-mounted mudlib**: Allows live editing during development without rebuilding the container.
+- **Bind-mounted mudlib**: Host directories are bind-mounted into both containers. Both run as uid 1000 (matching the host user), so file permissions just work — no named volumes or group hacks needed.
 
 ## Credits & Acknowledgments
 

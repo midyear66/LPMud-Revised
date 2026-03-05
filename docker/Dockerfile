@@ -38,12 +38,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy the built driver
 COPY --from=builder /usr/local/bin/ldmud /usr/local/bin/ldmud
 
-# Create mud user (don't run as root)
-RUN useradd -r -m -d /mud -s /bin/bash mud
+# Create mud user with uid 1000 (matches host user for bind mount permissions)
+RUN useradd -u 1000 -m -d /mud -s /bin/bash mud
 
 # Set up mudlib directory
 WORKDIR /mud
-RUN mkdir -p /mud/lib /mud/log /mud/tmp /mud/lib/players
+RUN mkdir -p /mud/lib /mud/lib/log /mud/lib/players
 
 # Copy mudlib and config (provided via context or volume)
 COPY --chown=mud:mud mudlib/ /mud/lib/

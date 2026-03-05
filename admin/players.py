@@ -104,7 +104,10 @@ def _write_save_file(path: str, data: dict[str, str]):
     """Write a dict back to ldmud save_object format."""
     with open(path, "w") as f:
         for key, value in data.items():
-            f.write(f"{key} {value}\n")
+            if value:
+                f.write(f"{key} {value}\n")
+            else:
+                f.write(f"{key}\n")
 
 
 def _display_value(raw: str) -> str:

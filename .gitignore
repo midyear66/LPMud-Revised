@@ -44,6 +44,14 @@ mud/log/
 mud/tmp/
 
 # =========================
+# Host bind-mount directories
+# =========================
+backups/*
+!backups/.gitkeep
+admin-data/*
+!admin-data/.gitkeep
+
+# =========================
 # OS metadata
 # =========================
 .DS_Store

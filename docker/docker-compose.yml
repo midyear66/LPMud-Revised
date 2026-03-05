@@ -9,9 +9,6 @@ services:
     volumes:
       # Mount mudlib for live editing (optional — remove for production)
       - ../mudlib:/mud/lib
-      # Persist logs and player save data
-      - lpmud-logs:/mud/log
-      - lpmud-save:/mud/lib/players
     restart: unless-stopped
 
   tools:
@@ -32,13 +29,11 @@ services:
     ports:
       - "8080:8080"              # Use 127.0.0.1:8080:8080 in production
     volumes:
-      - ../mudlib:/mud/lib:ro    # Read-only — can backup but not modify
-      - lpmud-save:/mud/players
-      - lpmud-logs:/mud/log
+      - ../mudlib:/mud/lib       # Read-write so admin can edit player saves
       - ../docs:/docs
       - ../scripts:/scripts:ro
-      - lpmud-backups:/backups
-      - lpmud-admin-data:/admin-data
+      - ../backups:/backups
+      - ../admin-data:/admin-data
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
@@ -51,9 +46,3 @@ services:
     restart: unless-stopped
     depends_on:
       - lpmud
-
-volumes:
-  lpmud-logs:
-  lpmud-save:
-  lpmud-backups:
-  lpmud-admin-data:
