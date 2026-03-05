@@ -14,7 +14,7 @@ class Config:
 
     # Paths inside the Docker container
     MUDLIB_PATH = os.environ.get("MUDLIB_PATH", "/mud/lib")
-    SAVE_PATH = os.environ.get("SAVE_PATH", "/mud/save")
+    SAVE_PATH = os.environ.get("SAVE_PATH", "/mud/players")
     LOG_PATH = os.environ.get("LOG_PATH", "/mud/log")
     DOCS_PATH = os.environ.get("DOCS_PATH", "/docs")
     SCRIPTS_PATH = os.environ.get("SCRIPTS_PATH", "/scripts")

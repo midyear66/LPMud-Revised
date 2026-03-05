@@ -28,6 +28,7 @@ def create_app():
     from scheduler import scheduler_bp, init_scheduler
     from mapviewer import map_bp
     from server import server_bp
+    from players import players_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -35,6 +36,7 @@ def create_app():
     app.register_blueprint(scheduler_bp)
     app.register_blueprint(map_bp)
     app.register_blueprint(server_bp)
+    app.register_blueprint(players_bp)
 
     # Initialize APScheduler
     init_scheduler(app)

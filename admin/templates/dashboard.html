@@ -58,6 +58,12 @@
   </div>
 
   <div class="card card-grid-item">
+    <div class="card-header">Players</div>
+    <div class="stat-value">{{ player_count }}</div>
+    <div class="stat-label">Player save files</div>
+  </div>
+
+  <div class="card card-grid-item">
     <div class="card-header">Backups</div>
     <div class="stat-value">{{ backup_info.count }}</div>
     <div class="stat-label">
@@ -88,6 +94,7 @@
   <div class="card-header">Quick Actions</div>
   <div class="btn-group">
     <a href="{{ url_for('map.map_view') }}" class="btn">View Map</a>
+    <a href="{{ url_for('players.players_list') }}" class="btn">Player Editor</a>
     <a href="{{ url_for('backups.backups_list') }}" class="btn">Manage Backups</a>
     <a href="{{ url_for('scheduler.scheduler_view') }}" class="btn">Scheduler</a>
   </div>
