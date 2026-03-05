@@ -295,5 +295,3 @@ room/orc_fortress/tower_ne.c
 room/orc_fortress/cells.c
 room/orc_fortress/stairs.c
 room/orc_fortress/throne.c
-players/peace/castle.c
-players/peace/workshop.c
