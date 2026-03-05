@@ -58,6 +58,7 @@ void init()
 {
     add_action("south", "south");
     add_action("north", "north");
+    add_action("west", "west");
 }
 
 int north()
@@ -76,10 +77,17 @@ int south()
     return 1;
 }
 
+int west()
+{
+    this_player()->move_player("west#room/orc_fortress/gate");
+    return 1;
+}
+
 void long()
 {
     write("This is the local strong point of the orcs.\n");
     write("There is an entrance to a small room to the north.\n");
+    write("A passage leads west, deeper into the orc fortress.\n");
 }
 
 string short() {

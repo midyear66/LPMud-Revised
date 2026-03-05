@@ -283,5 +283,17 @@ room/well.c
 room/wild1.c
 room/wiz_hall.c
 room/yard.c
+room/orc_fortress/gate.c
+room/orc_fortress/mess.c
+room/orc_fortress/armory.c
+room/orc_fortress/barracks.c
+room/orc_fortress/hall.c
+room/orc_fortress/pit.c
+room/orc_fortress/tower_n.c
+room/orc_fortress/wall_n.c
+room/orc_fortress/tower_ne.c
+room/orc_fortress/cells.c
+room/orc_fortress/stairs.c
+room/orc_fortress/throne.c
 players/peace/castle.c
 players/peace/workshop.c
