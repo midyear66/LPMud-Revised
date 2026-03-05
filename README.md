@@ -74,6 +74,7 @@ lpmud/
 │   ├── world-map.png       #   Visual world map
 │   ├── world-map.txt       #   ASCII world map
 │   └── room-connectivity.txt  # Room connection graph
+├── mudlib-orig/             # Unmodified original 2.4.5 mudlib (for reference/diffing)
 ├── mudlib/                 # LPmud 2.4.5 mudlib (live-editable via volume)
 │   ├── obj/                #   Core objects (master, player, etc.)
 │   ├── room/               #   World rooms
@@ -117,6 +118,15 @@ To re-fetch a clean copy of the mudlib:
 rm -rf mudlib/*
 ./scripts/extract-mudlib.sh
 ```
+
+## Custom Additions
+
+The following changes have been made beyond the original 2.4.5 mudlib (use `mudlib-orig/` to diff against the unmodified source):
+
+- **Orc Fortress Quest** — 12-room dungeon connected from the existing fortress room (`room/fortress.c`). Includes gate, mess hall, armory, barracks, great hall, pit, towers, walls, cells, stairs, and throne room (boss). Located in `room/orc_fortress/`.
+- **Bug fixes** — Runtime error logging in `obj/master.c`, relaxed wizard level check in `obj/leo.c`.
+
+> **Convention:** When adding new public areas to the mudlib, document them in this section.
 
 ## Becoming a Wizard
 
