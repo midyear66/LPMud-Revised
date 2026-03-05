@@ -23,7 +23,7 @@ RUN ./autogen.sh \
     && ./configure \
         --prefix=/usr/local \
         --enable-compat \
-    && make -j$(nproc) \
+    && make \
     && make install
 
 # --- Runtime stage ---
@@ -43,7 +43,7 @@ RUN useradd -r -m -d /mud -s /bin/bash mud
 
 # Set up mudlib directory
 WORKDIR /mud
-RUN mkdir -p /mud/lib /mud/log /mud/tmp /mud/save
+RUN mkdir -p /mud/lib /mud/log /mud/tmp /mud/lib/players
 
 # Copy mudlib and config (provided via context or volume)
 COPY --chown=mud:mud mudlib/ /mud/lib/

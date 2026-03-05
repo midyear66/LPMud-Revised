@@ -1273,6 +1273,8 @@ void runtime_error ( string err, string prg, string curobj, int line
 // program was executed.
 
 {
+  write_file("log/RUNTIME_ERROR", ctime() + " " + err + "program: " + (prg || "?") + ", object: " + (curobj || "?") + " line " + line + "\n");
+
   if (this_player() && interactive(this_player()))
     catch( write(
 	query_player_level("error messages") ?

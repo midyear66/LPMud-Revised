@@ -12,9 +12,10 @@ RUN apt-get update && \
         libfreetype6-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Create non-root user with UID 1000 (matches typical 'mud' user)
+# Create non-root user; add to gid 999 so it can read mud-owned save files (mode 640)
 RUN groupadd -g 1000 admin && \
-    useradd -u 1000 -g admin -m -s /bin/sh admin
+    groupadd -g 999 mud && \
+    useradd -u 1000 -g admin -G mud -m -s /bin/sh admin
 
 WORKDIR /app
 

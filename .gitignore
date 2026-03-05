@@ -6,7 +6,8 @@ mudlib/players/
 # =========================
 # Runtime logs (may contain player data)
 # =========================
-mudlib/log/
+mudlib/log/*
+!mudlib/log/.gitkeep
 
 # =========================
 # Secrets and credentials

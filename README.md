@@ -61,6 +61,7 @@ lpmud/
 │   ├── backups.py          #   Backup create/list/download/restore/delete
 │   ├── scheduler.py        #   APScheduler cron UI for map regeneration
 │   ├── mapviewer.py        #   Interactive Leaflet map viewer
+│   ├── players.py          #   Player save file viewer/editor
 │   ├── templates/          #   Jinja2 templates (base, login, dashboard, etc.)
 │   └── static/             #   CSS (light/dark theme), JS (theme toggle, map)
 ├── config/                 # ldmud runtime configuration
@@ -119,7 +120,7 @@ rm -rf mudlib/*
 
 To gain wizard privileges, log out and edit your player save file:
 
-1. Find your save file at `mudlib/players/<yourname>.o`
+1. Find your save file at `mudlib/players/<yourname>.o` (or use the admin Player Editor at `:8080/players`)
 2. Set the `level` field to 25 or higher
 3. Log back in — you now have wizard commands
 
@@ -193,8 +194,9 @@ docker compose -f docker/docker-compose.yml up -d admin
 
 | Page | Description |
 |------|-------------|
-| **Dashboard** | Server overview — room count, backup status, scheduler status |
+| **Dashboard** | Server overview — room count, player count, backup status, scheduler status |
 | **Map** | Interactive world map viewer (Leaflet.js with zoom/pan/drag) |
+| **Players** | Browse and edit player save files — stats, levels, inventory, flags |
 | **Backups** | Create, download, restore, and delete tar.gz backups of mudlib, saves, or logs |
 | **Scheduler** | Set a daily schedule for automatic map regeneration, or run it on demand |
 

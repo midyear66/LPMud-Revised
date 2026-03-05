@@ -9,9 +9,9 @@ services:
     volumes:
       # Mount mudlib for live editing (optional — remove for production)
       - ../mudlib:/mud/lib
-      # Persist logs and save data
+      # Persist logs and player save data
       - lpmud-logs:/mud/log
-      - lpmud-save:/mud/save
+      - lpmud-save:/mud/lib/players
     restart: unless-stopped
 
   tools:
@@ -33,7 +33,7 @@ services:
       - "8080:8080"              # Use 127.0.0.1:8080:8080 in production
     volumes:
       - ../mudlib:/mud/lib:ro    # Read-only — can backup but not modify
-      - lpmud-save:/mud/save
+      - lpmud-save:/mud/players
       - lpmud-logs:/mud/log
       - ../docs:/docs
       - ../scripts:/scripts:ro

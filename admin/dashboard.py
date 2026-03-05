@@ -92,6 +92,13 @@ def _get_server_info() -> dict:
         return {"available": False, "status": "unavailable"}
 
 
+def _get_player_count(save_path: str) -> int:
+    """Count .o files in the players save directory."""
+    if not os.path.isdir(save_path):
+        return 0
+    return sum(1 for f in os.listdir(save_path) if f.endswith(".o"))
+
+
 @dashboard_bp.route("/dashboard")
 @login_required
 def dashboard():
@@ -100,6 +107,7 @@ def dashboard():
         "backup_info": _get_backup_info(cfg["BACKUP_PATH"]),
         "map_info": _get_map_info(cfg["DOCS_PATH"]),
         "room_count": _get_room_count(cfg["MUDLIB_PATH"]),
+        "player_count": _get_player_count(cfg["SAVE_PATH"]),
         "scheduler_info": _get_scheduler_info(),
         "server_info": _get_server_info(),
     }

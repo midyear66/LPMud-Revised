@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Players — LPmud Admin{% endblock %}
+
+{% block content %}
+{% if editing %}
+{# ===== Player Editor ===== #}
+<div class="page-header">
+  <h1>
+    <a href="{{ url_for('players.players_list') }}" style="opacity:0.5; text-decoration:none;">&larr;</a>
+    Editing: {{ editing }}
+  </h1>
+  <p>Modify player attributes and save. Changes take effect on next login.</p>
+</div>
+
+<form method="post" action="{{ url_for('players.player_save', name=editing) }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  {% for group_name, fields in field_groups.items() %}
+  <div class="card">
+    <div class="card-header">{{ group_name }}</div>
+    <div class="field-grid">
+      {% for field in fields %}
+      <div class="form-group">
+        <label for="field-{{ field.name }}">{{ field.label }}</label>
+        {% if field.type.startswith('select:') %}
+          {% set options = field.type[7:].split(',') %}
+          <select id="field-{{ field.name }}" name="{{ field.name }}">
+            {% for opt in options %}
+              {% set val = opt.split('=')[0] %}
+              {% set lbl = opt.split('=')[1] %}
+              <option value="{{ val }}" {% if field.value == val %}selected{% endif %}>{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        {% elif field.type == 'number' %}
+          <input type="number" id="field-{{ field.name }}" name="{{ field.name }}"
+                 value="{{ field.value }}" step="1">
+        {% else %}
+          <input type="text" id="field-{{ field.name }}" name="{{ field.name }}"
+                 value="{{ field.value }}">
+        {% endif %}
+        {% if field.description %}
+        <span class="field-desc">{{ field.description }}</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+    <a href="{{ url_for('players.players_list') }}" class="btn">Cancel</a>
+  </div>
+</form>
+
+{% else %}
+{# ===== Player List ===== #}
+<div class="page-header">
+  <h1>Players</h1>
+  <p>View and edit player save files</p>
+</div>
+
+<div class="card">
+  <div class="card-header">Player Save Files</div>
+  {% if players %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Level</th>
+          <th>Gender</th>
+          <th>Title</th>
+          <th>Experience</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in players %}
+        <tr>
+          <td><strong>{{ p.name }}</strong></td>
+          <td>{{ p.level }}</td>
+          <td>{{ p.gender }}</td>
+          <td>{{ p.title }}</td>
+          <td>{{ p.experience }}</td>
+          <td>
+            <a href="{{ url_for('players.player_edit', name=p.name) }}" class="btn btn-sm">Edit</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>No player save files found.</p>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

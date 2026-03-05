@@ -24,6 +24,10 @@
            class="nav-item {% if request.endpoint and request.endpoint.startswith('map.') %}active{% endif %}">
           <span class="nav-icon">&#9830;</span> Map
         </a>
+        <a href="{{ url_for('players.players_list') }}"
+           class="nav-item {% if request.endpoint and request.endpoint.startswith('players.') %}active{% endif %}">
+          <span class="nav-icon">&#9823;</span> Players
+        </a>
         <a href="{{ url_for('backups.backups_list') }}"
            class="nav-item {% if request.endpoint and request.endpoint.startswith('backups.') %}active{% endif %}">
           <span class="nav-icon">&#9654;</span> Backups
