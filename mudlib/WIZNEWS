@@ -1,1 +1,29 @@
---- Wizards get their own set of breaking news from the file /WIZNEWS.
+*** Wizard News ***
+
+Welcome, wizard! Here are some things to know:
+
+RECENT CHANGES:
+- Orc Fortress quest added (room/orc_fortress/) -- 12-room dungeon
+  connected from room/fortress.c. Includes boss encounter in the
+  throne room.
+- Runtime error logging enabled in obj/master.c -- errors are now
+  written to log/debug.log for easier debugging.
+- Wizard level check relaxed in obj/leo.c.
+- Double login prompt bug fixed in obj/player.c.
+
+WIZARD COMMANDS:
+  Type 'help' to see wizard-specific commands. Key commands include:
+  clone <file>    - create an instance of an object
+  destruct <obj>  - destroy an object
+  goto <place>    - teleport to a room or player
+  load <file>     - load/compile an LPC file
+  update <file>   - reload a modified object
+  stat <player>   - view a player's stats
+  trans <player>  - teleport a player to you
+  ed <file>       - edit a file with the in-game editor
+
+BUILDING:
+  Room files go in room/, monsters in monsters/, objects in obj/.
+  See doc/build/ for building guides on rooms, monsters, weapons,
+  and armour. New public areas should be documented in the project
+  README under "Custom Additions".

@@ -1,18 +1,24 @@
-Welcome to the LPmud 2.4.5 mudlib.
+Welcome to the LPmud 2.4.5 mudlib!
 
-Take a look around and see how LPmud used to look like in its early days.
+To log in, enter the name of your game character at the prompt. If this
+is your first time, a new character will be created and you will be asked
+for a password and a couple of other things.
 
-For basic instructions, simply type 'help' after you logged in and explore
-from there. You move by giving directions (e.g. 'north', 'down', 'northwest'
-or their abbreviations 'n', 'd', 'nw').
+Once logged in, type 'help' to see a list of available commands. You move
+by giving directions (e.g. 'north', 'south', 'east', 'west', 'up', 'down',
+or their abbreviations 'n', 's', 'e', 'w', 'u', 'd'). Diagonal movement
+is also supported ('ne', 'nw', 'se', 'sw').
 
-When you want to become a wizard, log out and use a text editor to change your
-level in the savefile (players/<yourname>.o) to 25 or higher. If you get bored
-with this welcome message, you can write your own in the file /WELCOME.
+Other useful commands:
+  look            - examine your surroundings
+  inventory (i)   - see what you are carrying
+  get / drop      - pick up or drop items
+  say <message>   - speak to others in the room
+  kill <monster>  - attack a monster
+  score           - view your stats and experience
 
-To log in, enter the name of your game character at the prompt, or just
-'guest'. If this is your first time, a new character will be created and you
-will be asked a for your password and couple of other things.
+Explore the world, defeat monsters, and gain experience. When you reach
+level 20, you will be promoted to wizard!
 
-Enjoy!
+Enjoy your adventure!
 
