@@ -155,11 +155,13 @@ void quest_talk(string str) {
 	       add_exp() calls query_ip_number(this_player()) which
 	       crashes on non-interactive objects. */
 	    object ring;
-	    ring = clone_object("obj/treasure");
+	    ring = clone_object("obj/armour");
 	    ring->set_id("ring");
 	    ring->set_alias("silver ring");
+	    ring->set_type("ring");
 	    ring->set_short("An enchanted silver ring");
 	    ring->set_long("A silver ring etched with holy symbols, glowing faintly with\nprotective enchantment. You could sell this at the shop.\n");
+	    ring->set_ac(1);
 	    ring->set_value(150);
 	    ring->set_weight(1);
 	    move_object(ring, player);
@@ -172,11 +174,7 @@ void quest_talk(string str) {
 "Brother Cedric places a silver ring in your hand.\n");
 	    say("Brother Cedric beams with relief and presses something into " +
 		player->query_name() + "'s hand.\n", player);
-	    /* Defer add_exp and set_quest via call_out because this
-	       runs in the monster's heartbeat where this_player() is
-	       the monster. Both functions log via query_ip_number on
-	       this_player() which crashes on non-interactive objects. */
-	    call_out("give_quest_reward", 0, player);
+	    give_quest_reward(player);
 	    return;
 	}
 	return;

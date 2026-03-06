@@ -744,7 +744,10 @@ void enable_commands()
 //---------------------------------------------------------------------------
 varargs string query_ip_name(object player)
 {
-    return interactive_info(player || this_player(), II_IP_NAME);
+    object ob = player || this_player();
+    if (!interactive(ob))
+	return 0;
+    return interactive_info(ob, II_IP_NAME);
 }
 
 #endif
@@ -753,7 +756,10 @@ varargs string query_ip_name(object player)
 //---------------------------------------------------------------------------
 varargs string query_ip_number(object player)
 {
-    return interactive_info(player || this_player(), II_IP_NUMBER);
+    object ob = player || this_player();
+    if (!interactive(ob))
+	return 0;
+    return interactive_info(ob, II_IP_NUMBER);
 }
 
 #endif
