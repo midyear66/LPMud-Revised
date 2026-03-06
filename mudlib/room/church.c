@@ -24,6 +24,7 @@ void init()
     add_action("pray", "pray");
     add_action("pray", "regenerate");
     add_action("south", "south");
+    add_action("north_cemetery", "north");
 }
 
 string short() {
@@ -88,6 +89,7 @@ void long(string str)
     write("to the church and pray.\n");
     write("There is a clock on the wall.\n");
     write("There is an exit to south.\n");
+    write("A path to the north leads to the old cemetery.\n");
     if (lamp_is_lit)
         write("The lamp beside the elevator is lit.\n");
 
@@ -160,6 +162,11 @@ int prevent_look_at_inv(string str)
 
 int south() {
     this_player()->move_player("south#room/vill_green");
+    return 1;
+}
+
+int north_cemetery() {
+    this_player()->move_player("north#room/cemetery");
     return 1;
 }
 
