@@ -254,6 +254,7 @@ docker compose -f docker/docker-compose.yml up -d admin
 - [LPmuds.net Downloads](http://lpmuds.net/downloads.html) — MUD resources and archives
 - [Intermud Protocol](http://lpmuds.net/intermud.html) — Inter-MUD communication
 - [CD Gamedriver](https://github.com/cotillion/cd-gamedriver) — Another LPmud driver fork
+- [Awesome MUDs](https://github.com/maldorne/awesome-muds) — Curated list of MUD codebases, drivers, clients, protocols, tools, and community resources
 
 ## Status
 
