@@ -139,7 +139,19 @@ room/giant_path.c: "A path" -> east:room/big_tree, west:room/giant_lair
 ORC VALLEY
 ==============================================================================
 
-room/fortress.c: "The orc fortress" -> north:room/orc_treasure, south:room/orc_vall
+room/fortress.c: "The orc fortress" -> north:room/orc_treasure, south:room/orc_vall, west:room/orc_fortress/gate
+room/orc_fortress/armory.c: "The armory" -> east:room/orc_fortress/mess, west:room/orc_fortress/barracks
+room/orc_fortress/barracks.c: "The barracks" -> east:room/orc_fortress/armory
+room/orc_fortress/cells.c: "The cells" -> north:room/orc_fortress/hall, west:room/orc_fortress/stairs
+room/orc_fortress/gate.c: "The gate of the orc fortress" -> east:room/fortress, west:room/orc_fortress/mess, south:room/orc_fortress/hall
+room/orc_fortress/hall.c: "The great hall" -> north:room/orc_fortress/gate, west:room/orc_fortress/pit, south:room/orc_fortress/cells
+room/orc_fortress/mess.c: "The mess hall" -> east:room/orc_fortress/gate, west:room/orc_fortress/armory, south:room/orc_fortress/pit
+room/orc_fortress/pit.c: "The warg pit" -> north:room/orc_fortress/mess, east:room/orc_fortress/hall, south:room/orc_fortress/stairs
+room/orc_fortress/stairs.c: "The stairs" -> north:room/orc_fortress/pit, east:room/orc_fortress/cells, south:room/orc_fortress/throne
+room/orc_fortress/throne.c: "The throne room" -> north:room/orc_fortress/stairs
+room/orc_fortress/tower_n.c: "The north watchtower" -> south:room/orc_fortress/gate, west:room/orc_fortress/wall_n
+room/orc_fortress/tower_ne.c: "The northeast tower" -> east:room/orc_fortress/wall_n
+room/orc_fortress/wall_n.c: "The north wall" -> east:room/orc_fortress/tower_n, west:room/orc_fortress/tower_ne
 room/orc_treasure.c: "The orc treasury" -> south:room/fortress
 room/orc_vall.c: "The orc valley" -> east:room/slope, north:room/fortress
 
@@ -317,11 +329,11 @@ ROOM COUNT SUMMARY
   PLAINS: 14 rooms
   MOUNTAINS: 4 rooms
   GIANTS: 4 rooms
-  ORC VALLEY: 3 rooms
+  ORC VALLEY: 15 rooms
   UNDERGROUND: 9 rooms
   MINES: 28 rooms
   SOUTH FOREST: 49 rooms
   CRESCENT LAKE SHORE: 30 rooms
   ISLE OF THE MAGI: 19 rooms
 
-  Total: 218 rooms
+  Total: 230 rooms
