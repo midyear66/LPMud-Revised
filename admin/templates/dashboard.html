@@ -11,10 +11,10 @@
   <div class="card card-grid-item">
     <div class="card-header">Game Server</div>
     {% if not server_info.available %}
-    <div class="stat-value"><span class="badge badge-warning">Unavailable</span></div>
+    <div class="stat-value" style="opacity:0.4">Unavailable</div>
     <div class="stat-label">Docker connection not available</div>
     {% elif server_info.running %}
-    <div class="stat-value"><span class="badge badge-success">Running</span></div>
+    <div class="stat-value">Running</div>
     <div class="stat-label">
       <div class="btn-group">
         <form method="post" action="{{ url_for('server.stop_server') }}" style="display:inline"
@@ -30,7 +30,7 @@
       </div>
     </div>
     {% else %}
-    <div class="stat-value"><span class="badge badge-error">{{ server_info.status|capitalize }}</span></div>
+    <div class="stat-value" style="opacity:0.4">{{ server_info.status|capitalize }}</div>
     <div class="stat-label">
       <form method="post" action="{{ url_for('server.start_server') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -78,13 +78,13 @@
   <div class="card card-grid-item">
     <div class="card-header">Scheduler</div>
     {% if scheduler_info.active %}
-    <div class="stat-value"><span class="badge badge-success">Active</span></div>
+    <div class="stat-value">Active</div>
     <div class="stat-label">
       {{ scheduler_info.job_count }} job{{ 's' if scheduler_info.job_count != 1 }}
       <br>Next run: {{ scheduler_info.next_run }}
     </div>
     {% else %}
-    <div class="stat-value"><span class="badge badge-warning">No schedule</span></div>
+    <div class="stat-value" style="opacity:0.4">No schedule</div>
     <div class="stat-label">Set a map regeneration schedule on the Scheduler page</div>
     {% endif %}
   </div>
