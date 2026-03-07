@@ -2779,6 +2779,7 @@ void add_standard_commands() {
     add_action("drop_thing", "drop");
     add_action("inventory", "i");
     add_action("look", "look");
+    add_action("look", "l");
     add_action("examine", "examine");
     add_action("examine", "exa", 1);
     add_action("help", "help");

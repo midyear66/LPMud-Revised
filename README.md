@@ -133,7 +133,10 @@ rm -rf mudlib/*
 
 ## Custom Additions
 
-The following changes have been made beyond the original 2.4.5 mudlib (use `mudlib-orig/` to diff against the unmodified source):
+<details>
+<summary>Changes beyond the original 2.4.5 mudlib (click to expand)</summary>
+
+Use `mudlib-orig/` to diff against the unmodified source.
 
 - **Orc Fortress Quest** — 12-room dungeon connected from the existing fortress room (`room/fortress.c`). Includes gate, mess hall, armory, barracks, great hall, pit, towers, walls, cells, stairs, and throne room (boss). Located in `room/orc_fortress/`.
 - **Forest Remedy Quest** — Multi-step fetch quest starting with a wounded traveler in `room/deep_forest1`. Player finds Doctor Willem (`room/doctor_hut` off `narr_alley`), who needs a silverleaf herb to make a remedy. The old herbalist (`room/herbalist_hut` off `forest6`) can hint at where the herb grows. Player collects the herb from a random forest room, brings it back to the doctor who creates a healing medicine, then delivers it to the traveler. Exclusive (one player at a time), awards 500 XP and the `forest_remedy` quest flag for wizard promotion. Controller: `obj/forest_quest.c`.
@@ -143,6 +146,8 @@ The following changes have been made beyond the original 2.4.5 mudlib (use `mudl
 - **Bug fixes** — Runtime error logging in `obj/master.c`, relaxed wizard level check in `obj/leo.c`, `query_ip_name`/`query_ip_number` crash guard for non-interactive objects in `obj/simul_efun.c`.
 
 > **Convention:** When adding new public areas to the mudlib, document them in this section.
+
+</details>
 
 ## Becoming a Wizard
 
