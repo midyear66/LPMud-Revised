@@ -1,4 +1,4 @@
-# LPmud Server (Dockerized)
+# LPmud Server and Admin Panel (Dockerized)
 
 Recreating a classic LPmud server using [ldmud](https://github.com/ldmud/ldmud) as the game driver, running the LPmud 2.4.5 mudlib — all packaged in a Docker container for easy deployment.
 
