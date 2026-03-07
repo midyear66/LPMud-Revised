@@ -9,9 +9,18 @@ Format: room_id: "Short Description" -> direction:destination, ...
 SPECIAL ROOMS
 ==============================================================================
 
+room/cemetery.c: "Old cemetery" -> south:room/church, down:room/crypt/entrance
+room/crypt/entrance.c: "Crypt entrance" -> up:room/cemetery, south:room/crypt/passage
+room/crypt/passage.c: "Crypt passage" -> north:room/crypt/entrance, south:room/crypt/tomb
+room/crypt/tomb.c: "Valdris's tomb" -> north:room/crypt/passage
 room/death/death_room.c: "death's workroom" -> (no exits)
+room/doctor_hut.c: "Doctor's hut" -> east:room/narr_alley
+room/herbalist_hut.c: "Herbalist's hut" -> north:room/forest6
 room/prison.c: "The local prison" -> (no exits)
 room/rum2.c: "Rum2" -> (no exits)
+room/station_east.c: "Eastroad Inn Station" -> up:room/eastroad5
+room/station_orc.c: "Orc Valley Station" -> up:room/orc_vall
+room/station_plains.c: "Plains Crossing Station" -> up:room/plane11
 room/test.c: "Test" -> (no exits)
 room/void.c: "The void" -> X:room/church, away:room/church
 
@@ -20,13 +29,13 @@ VILLAGE
 ==============================================================================
 
 room/adv_guild.c: "The adventurers guild" -> north:room/vill_road2, south:room/adv_inner
-room/adv_inner.c: "The inner room of adventurers guild" -> north:room/adv_guild, south:room/adv_inner2
+room/adv_inner.c: "The inner room of adventu..." -> north:room/adv_guild, south:room/adv_inner2
 room/adv_inner2.c: "The LPC board" -> north:room/adv_inner
 room/bank.c: "The bank" -> west:room/narr_alley, east:room/bankroom
 room/bankroom.c: "backroom of bank" -> west:room/bank
-room/church.c: "Village church" -> elsewhere:room/test, west:room/elevator, south:room/vill_green
+room/church.c: "Village church" -> elsewhere:room/test, west:room/elevator, south:room/vill_green, north:room/cemetery
 room/crop.c: "Fields" -> north:room/vill_shore
-room/narr_alley.c: "Narrow alley" -> north:room/vill_road1, east:room/bank, south:room/post, down:room/well
+room/narr_alley.c: "Narrow alley" -> north:room/vill_road1, east:room/bank, south:room/post, west:room/doctor_hut, down:room/well
 room/post.c: "The post office" -> north:room/narr_alley
 room/pub2.c: "A bottle of beer" -> west:room/yard
 room/shop.c: "The shop" -> south:room/vill_road2, west:room/storage, north:room/store
@@ -57,7 +66,7 @@ room/eastroad1.c: "East road" -> north:room/eastroad2, south:room/vill_shore
 room/eastroad2.c: "East road" -> north:room/eastroad3, south:room/eastroad1
 room/eastroad3.c: "East road" -> north:room/eastroad4, south:room/eastroad2, west:room/sunalley1
 room/eastroad4.c: "East road" -> north:room/eastroad5, south:room/eastroad3
-room/eastroad5.c: "East road" -> south:room/eastroad4, west:room/inn
+room/eastroad5.c: "East road" -> south:room/eastroad4, west:room/inn, down:room/station_east
 room/inn.c: "Eastroad Inn" -> east:room/eastroad5
 room/sunalley1.c: "Sun alley" -> west:room/sunalley2, east:room/eastroad3
 room/sunalley2.c: "Sun alley" -> east:room/sunalley1
@@ -93,7 +102,7 @@ room/forest12.c: "Deep forest" -> south:room/south/sforst1, east:room/forest11
 room/forest3.c: "Deep forest" -> north:room/slope, south:room/forest4
 room/forest4.c: "Deep forest" -> north:room/forest3, west:room/forest5, east:room/forest6, south:room/forest7
 room/forest5.c: "Deep forest" -> west:room/forest8, east:room/forest4
-room/forest6.c: "Deep forest" -> west:room/forest4
+room/forest6.c: "Deep forest" -> west:room/forest4, south:room/herbalist_hut
 room/forest7.c: "Deep forest" -> west:room/forest10, north:room/forest4
 room/forest8.c: "Deep forest" -> south:room/forest9, east:room/forest5
 room/forest9.c: "Deep forest" -> north:room/forest8, east:room/forest10, west:room/forest11
@@ -104,7 +113,7 @@ PLAINS
 
 room/plane1.c: "A large open plain" -> south:room/clearing, north:room/plane2
 room/plane10.c: "A large open plain" -> north:room/plane12, east:room/plane6, south:room/plane7
-room/plane11.c: "A large open plain" -> south:room/plane6, north:room/mount_pass, east:room/plane13, west:room/plane12
+room/plane11.c: "A large open plain" -> south:room/plane6, north:room/mount_pass, east:room/plane13, west:room/plane12, down:room/station_plains
 room/plane12.c: "A large open plain" -> west:room/deep_forest1, east:room/plane11, south:room/plane10
 room/plane13.c: "A large open plain" -> west:room/plane11, south:room/plane8
 room/plane2.c: "A large open plain" -> south:room/plane1, north:room/plane3, east:room/plane4, west:room/plane5
@@ -131,7 +140,7 @@ GIANTS
 ==============================================================================
 
 room/big_tree.c: "Big tree" -> east:room/plane7, west:room/giant_path
-room/giant_conf.c: "Giants conference of human bashing" -> east:room/giant_lair
+room/giant_conf.c: "Giants conference of huma..." -> east:room/giant_lair
 room/giant_lair.c: "Lair of the Giant" -> east:room/giant_path, west:room/giant_conf
 room/giant_path.c: "A path" -> east:room/big_tree, west:room/giant_lair
 
@@ -153,7 +162,7 @@ room/orc_fortress/tower_n.c: "The north watchtower" -> south:room/orc_fortress/g
 room/orc_fortress/tower_ne.c: "The northeast tower" -> east:room/orc_fortress/wall_n
 room/orc_fortress/wall_n.c: "The north wall" -> east:room/orc_fortress/tower_n, west:room/orc_fortress/tower_ne
 room/orc_treasure.c: "The orc treasury" -> south:room/fortress
-room/orc_vall.c: "The orc valley" -> east:room/slope, north:room/fortress
+room/orc_vall.c: "The orc valley" -> east:room/slope, north:room/fortress, down:room/station_orc
 
 ==============================================================================
 UNDERGROUND
@@ -164,7 +173,7 @@ room/maze1/maze2.c: "A maze" -> north:room/maze1/maze3, north:room/maze1/maze1, 
 room/maze1/maze3.c: "A maze" -> north:room/maze1/maze4, north:room/maze1/maze2, south:room/maze1/maze4, south:room/maze1/maze1, east:room/maze1/maze4, east:room/well, west:room/maze1/maze4, west:room/well
 room/maze1/maze4.c: "A maze" -> north:room/maze1/maze5, north:room/maze1/maze3, south:room/maze1/maze5, south:room/maze1/maze2, east:room/maze1/maze5, east:room/well, west:room/maze1/maze5, west:room/well
 room/maze1/maze5.c: "End of maze" -> south:room/maze1/maze4
-room/station.c: "Central point" -> up:room/vill_road2
+room/station.c: "Village Station" -> up:room/vill_road2
 room/sub/after_trap.c: "Black room" -> east:room/sub/door_trap
 room/sub/door_trap.c: "Room with black walls" -> east:room/well, west:room/sub/after_trap
 room/well.c: "Down the well" -> up:room/narr_alley, north:room/maze1/maze1, west:room/sub/door_trap
@@ -298,28 +307,28 @@ ISLE OF THE MAGI
 room/south/lair.c: "The bottom of the well" -> up the ladder:room/south/sislnd17
 room/south/sislnd1.c: "Link to the mainland" -> south:room/south/sislnd13, east:room/south/sislnd2, northwest:room/south/sshore26, southwest:room/south/sislnd12
 room/south/sislnd10.c: "Focus Point" -> east:room/south/sislnd11, southeast:room/south/sislnd9
-room/south/sislnd11.c: "A grove on the shore of the Isle of the Magi" -> south:room/south/sislnd9, east:room/south/sislnd12, west:room/south/sislnd10
-room/south/sislnd12.c: "The shore of the Isle of the Magi" -> south:room/south/sislnd17, east:room/south/sislnd13, west:room/south/sislnd11, northeast:room/south/sislnd1
-room/south/sislnd13.c: "Halfway up the hill on the Isle of the Magi" -> north:room/south/sislnd1, south:room/south/sislnd18, east:room/south/sislnd14, west:room/south/sislnd12
-room/south/sislnd14.c: "Halfway up the hill on the Isle of the Magi" -> north:room/south/sislnd2, south:room/south/sislnd14, east:room/south/sislnd4, west:room/south/sislnd13
+room/south/sislnd11.c: "A grove on the shore of t..." -> south:room/south/sislnd9, east:room/south/sislnd12, west:room/south/sislnd10
+room/south/sislnd12.c: "The shore of the Isle of ..." -> south:room/south/sislnd17, east:room/south/sislnd13, west:room/south/sislnd11, northeast:room/south/sislnd1
+room/south/sislnd13.c: "Halfway up the hill on th..." -> north:room/south/sislnd1, south:room/south/sislnd18, east:room/south/sislnd14, west:room/south/sislnd12
+room/south/sislnd14.c: "Halfway up the hill on th..." -> north:room/south/sislnd2, south:room/south/sislnd14, east:room/south/sislnd4, west:room/south/sislnd13
 room/south/sislnd15.c: "A crumbling stone monument" -> north:room/south/sislnd14, south:room/south/sislnd6, east:room/south/sislnd5, west:room/south/sislnd18
-room/south/sislnd16.c: "Halfway up the hill on the Isle of the Magi" -> north:room/south/sislnd18, south:room/south/sislnd7, east:room/south/sislnd6, west:room/south/sislnd8
+room/south/sislnd16.c: "Halfway up the hill on th..." -> north:room/south/sislnd18, south:room/south/sislnd7, east:room/south/sislnd6, west:room/south/sislnd8
 room/south/sislnd17.c: "An old disused well" -> north:room/south/sislnd12, south:room/south/sislnd8, east:room/south/sislnd18, west:room/south/sislnd9, down the well:room/south/lair
-room/south/sislnd18.c: "The ruins of Arcanarton's tower" -> north:room/south/sislnd13, north:room/south/sislnd16, north:room/south/sislnd15, west:room/south/sislnd17
-room/south/sislnd2.c: "The shore of the Isle of the Magi" -> south:room/south/sislnd14, east:room/south/sislnd3, west:room/south/sislnd1
-room/south/sislnd3.c: "Shore of the Isle of the Magi" -> south:room/south/sislnd4, west:room/south/sislnd2
-room/south/sislnd4.c: "The shore of the Isle of the Magi" -> north:room/south/sislnd3, south:room/south/sislnd5, west:room/south/sislnd14
-room/south/sislnd5.c: "The shore of the Isle of the Magi" -> north:room/south/sislnd4, west:room/south/sislnd15, southwest:room/south/sislnd6
-room/south/sislnd6.c: "The shore of the Isle of the Magi" -> north:room/south/sislnd5, west:room/south/sislnd16, northeast:room/south/sislnd5, southwest:room/south/sislnd7
-room/south/sislnd7.c: "The shore of the Isle of the Magi" -> north:room/south/sislnd16, northeast:room/south/sislnd6, northwest:room/south/sislnd8
-room/south/sislnd8.c: "The shore of the Isle of the Magi" -> north:room/south/sislnd17, east:room/south/sislnd16, southeast:room/south/sislnd7, northwest:room/south/sislnd9
-room/south/sislnd9.c: "A small grove on the shore of the Isle of the Magi" -> north:room/south/sislnd11, east:room/south/sislnd17, southeast:room/south/sislnd8, northwest:room/south/sislnd10
+room/south/sislnd18.c: "The ruins of Arcanarton's..." -> north:room/south/sislnd13, north:room/south/sislnd16, north:room/south/sislnd15, west:room/south/sislnd17
+room/south/sislnd2.c: "The shore of the Isle of ..." -> south:room/south/sislnd14, east:room/south/sislnd3, west:room/south/sislnd1
+room/south/sislnd3.c: "Shore of the Isle of the ..." -> south:room/south/sislnd4, west:room/south/sislnd2
+room/south/sislnd4.c: "The shore of the Isle of ..." -> north:room/south/sislnd3, south:room/south/sislnd5, west:room/south/sislnd14
+room/south/sislnd5.c: "The shore of the Isle of ..." -> north:room/south/sislnd4, west:room/south/sislnd15, southwest:room/south/sislnd6
+room/south/sislnd6.c: "The shore of the Isle of ..." -> north:room/south/sislnd5, west:room/south/sislnd16, northeast:room/south/sislnd5, southwest:room/south/sislnd7
+room/south/sislnd7.c: "The shore of the Isle of ..." -> north:room/south/sislnd16, northeast:room/south/sislnd6, northwest:room/south/sislnd8
+room/south/sislnd8.c: "The shore of the Isle of ..." -> north:room/south/sislnd17, east:room/south/sislnd16, southeast:room/south/sislnd7, northwest:room/south/sislnd9
+room/south/sislnd9.c: "A small grove on the shor..." -> north:room/south/sislnd11, east:room/south/sislnd17, southeast:room/south/sislnd8, northwest:room/south/sislnd10
 
 ==============================================================================
 ROOM COUNT SUMMARY
 ==============================================================================
 
-  SPECIAL ROOMS: 5 rooms
+  SPECIAL ROOMS: 14 rooms
   VILLAGE: 20 rooms
   ELEVATOR SYSTEM: 4 rooms
   EAST ROAD: 8 rooms
@@ -336,4 +345,4 @@ ROOM COUNT SUMMARY
   CRESCENT LAKE SHORE: 30 rooms
   ISLE OF THE MAGI: 19 rooms
 
-  Total: 230 rooms
+  Total: 239 rooms

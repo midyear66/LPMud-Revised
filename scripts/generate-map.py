@@ -24,8 +24,8 @@ from PIL import Image, ImageDraw, ImageFont
 # ---------------------------------------------------------------------------
 # Canvas
 # ---------------------------------------------------------------------------
-WIDTH = 6000
-HEIGHT = 4500
+WIDTH = 7200
+HEIGHT = 5400
 BG_COLOR = (25, 25, 35)
 
 # ---------------------------------------------------------------------------
@@ -243,6 +243,13 @@ def parse_short_desc(content):
     return None
 
 
+def truncate_label(label, max_chars=28):
+    """Ellipsize labels over max_chars characters."""
+    if len(label) <= max_chars:
+        return label
+    return label[:max_chars - 3] + "..."
+
+
 def label_from_id(room_id):
     """Generate a human-readable label from a room ID."""
     name = room_id.split("/")[-1]
@@ -307,7 +314,7 @@ def discover_rooms(mudlib_path):
 
             # Get label
             short = parse_short_desc(content)
-            label = short if short else label_from_id(room_id)
+            label = truncate_label(short if short else label_from_id(room_id))
 
             # Classify region
             region = classify_region(room_id)
@@ -366,27 +373,28 @@ def build_graph(rooms, edges):
 # Layout
 # ---------------------------------------------------------------------------
 
-# Region center seeds — approximate positions on the canvas (normalized 0-1)
-REGION_SEEDS = {
-    "special":      (0.08, 0.06),
-    "mines":        (0.14, 0.20),
-    "mountains":    (0.59, 0.07),
-    "plains":       (0.59, 0.22),
-    "giants":       (0.30, 0.26),
-    "orcs":         (0.30, 0.32),
-    "forest":       (0.44, 0.34),
-    "deep_forest":  (0.33, 0.40),
-    "village":      (0.63, 0.37),
-    "east_road":    (0.77, 0.30),
-    "sea":          (0.85, 0.37),
-    "elevator":     (0.54, 0.34),
-    "underground":  (0.63, 0.50),
-    "south_forest": (0.50, 0.72),
-    "shore":        (0.50, 0.77),
-    "island":       (0.50, 0.82),
+# Region bounding boxes: (x, y, w, h) in pixels — layout target areas
+# Sized proportionally to room count; arranged to match MUD geography
+REGION_BOXES = {
+    "special":      (120,   120,  900,  450),
+    "mines":        (120,   700,  1200, 1300),
+    "mountains":    (2800,  120,  2400, 800),
+    "plains":       (5400,  120,  1650, 800),
+    "giants":       (1500,  700,  1100, 700),
+    "orcs":         (1500,  1500, 1100, 700),
+    "forest":       (2800,  1050, 1600, 900),
+    "deep_forest":  (1500,  2300, 1600, 900),
+    "village":      (4550,  1050, 1800, 1000),
+    "east_road":    (5600,  2150, 1450, 800),
+    "sea":          (5600,  3050, 1450, 800),
+    "elevator":     (3300,  2050, 1000, 500),
+    "underground":  (4550,  2700, 2500, 900),
+    "south_forest": (1500,  3350, 1700, 650),
+    "shore":        (1500,  4100, 1700, 600),
+    "island":       (1500,  4800, 1700, 450),
 }
 
-MARGIN = 100
+MARGIN = 120
 
 # Direction-to-grid offsets (x, y) — y grows downward so north is -y
 DIRECTION_OFFSETS = {
@@ -443,146 +451,139 @@ def _best_direction(src, dst, G):
     return None
 
 
-def _spiral_search(target, occupied, prefer_dx=0, prefer_dy=0, max_radius=120,
-                    min_clearance=2):
-    """Find the nearest empty grid cell to *target* with minimum clearance.
-
-    Searches in expanding rings, preferring cells in the direction given by
-    *(prefer_dx, prefer_dy)*.  Rejects any cell within Chebyshev distance
-    < *min_clearance* of any already-occupied cell.
-    """
-    tx, ty = target
-
-    def _has_clearance(cell):
-        """Return True if *cell* is at least *min_clearance* away from all occupied cells."""
-        cx, cy = cell
-        for (ox, oy) in occupied:
-            if max(abs(cx - ox), abs(cy - oy)) < min_clearance:
-                return False
-        return True
-
-    if target not in occupied and _has_clearance(target):
-        return target
-
-    for radius in range(1, max_radius):
-        best = None
-        best_score = float("inf")
-        for dx in range(-radius, radius + 1):
-            for dy in range(-radius, radius + 1):
-                if abs(dx) != radius and abs(dy) != radius:
-                    continue  # Only check the ring perimeter
-                cell = (tx + dx, ty + dy)
-                if cell in occupied:
-                    continue
-                if not _has_clearance(cell):
-                    continue
-                # Score: prefer cells in the intended direction
-                score = abs(dx) + abs(dy)  # Manhattan distance
-                if prefer_dx and dx * prefer_dx > 0:
-                    score -= 0.5
-                if prefer_dy and dy * prefer_dy > 0:
-                    score -= 0.5
-                if score < best_score:
-                    best_score = score
-                    best = cell
-        if best is not None:
-            return best
-
-    # Fallback (should never reach here with 218 rooms)
-    return (tx + max_radius, ty)
+def _label_pixel_width(label, font):
+    """Estimate the pixel width of a label rendered with the given font."""
+    try:
+        bbox = font.getbbox(label)
+        return bbox[2] - bbox[0]
+    except Exception:
+        return len(label) * 7
 
 
-def _multi_seed_bfs(G, edges_raw):
-    """Place rooms on a grid using multi-seed BFS that respects exit directions.
+def _region_grid_layout(G, edges_raw):
+    """Place rooms on per-region grids using BFS with compass offsets.
+
+    Each region gets its own local grid where cell size is based on the
+    widest label in that region.  Rooms are placed via BFS from the
+    highest-degree node using compass direction offsets of +/-1.
 
     Returns:
-        grid_pos: dict[node -> (gx, gy)]  grid coordinates
-        vertical_edges: set of (u, v) tuples that are purely vertical connections
+        pixel_pos: dict[node -> (px, py)]
+        vertical_edges: set of (u, v) tuples for purely vertical connections
     """
-    # Build directed exits lookup: (src, dst) -> [direction, ...]
-    directed_exits = defaultdict(list)
-    for src, direction, dst in edges_raw:
-        if src in G.nodes and dst in G.nodes:
-            directed_exits[(src, dst)].append(direction)
-
     # Group nodes by region
     region_nodes = defaultdict(list)
     for node in G.nodes:
         region = G.nodes[node].get("region", "special")
         region_nodes[region].append(node)
 
-    # Find connected components
-    components = list(nx.connected_components(G))
-    main_component = max(components, key=len) if components else set()
-    singleton_components = [c for c in components if len(c) <= 2]
+    # Local direction offsets (unit grid steps)
+    local_offsets = {
+        "north":     ( 0, -1),
+        "south":     ( 0,  1),
+        "east":      ( 1,  0),
+        "west":      (-1,  0),
+        "northeast": ( 1, -1),
+        "southeast": ( 1,  1),
+        "southwest": (-1,  1),
+        "northwest": (-1, -1),
+    }
 
-    # Grid scale: map region seeds (0-1) to grid coordinates
-    GRID_W, GRID_H = 240, 180
+    pixel_pos = {}
 
-    # Pick one seed per region: highest-degree node in main component
-    seeds = []  # (node, gx, gy)
-    seeded_regions = set()
     for region, nodes in region_nodes.items():
-        main_nodes = [n for n in nodes if n in main_component]
-        if not main_nodes:
-            continue
-        best = max(main_nodes, key=lambda n: G.degree(n))
-        sx, sy = REGION_SEEDS.get(region, (0.5, 0.5))
-        gx = int(sx * GRID_W)
-        gy = int(sy * GRID_H)
-        seeds.append((best, gx, gy))
-        seeded_regions.add(region)
+        box = REGION_BOXES.get(region, (3600, 2700, 1000, 500))
+        bx, by, bw, bh = box
 
-    # Place seeds and BFS
-    grid_pos = {}
-    occupied = {}  # (gx, gy) -> node
+        # Compute cell size based on widest label + padding
+        max_lw = 0
+        for n in nodes:
+            lbl = G.nodes[n].get("label", n)
+            lw = _label_pixel_width(lbl, FONT_ROOM)
+            if lw > max_lw:
+                max_lw = lw
+        cell_w = max_lw + 24
+        cell_h = 28
 
-    # Sort seeds by degree descending so highest-connected regions anchor first
-    seeds.sort(key=lambda s: G.degree(s[0]), reverse=True)
+        # Build region subgraph
+        sub = G.subgraph(nodes)
 
-    queue = deque()
-    for node, gx, gy in seeds:
-        if node in grid_pos:
-            continue
-        cell = (gx, gy)
-        if cell in occupied:
-            cell = _spiral_search(cell, occupied)
-        grid_pos[node] = cell
-        occupied[cell] = node
-        queue.append(node)
+        # BFS seed: highest-degree node in this region
+        seed = max(nodes, key=lambda n: sub.degree(n))
 
-    # BFS from all seeds
-    vertical_edges = set()
-    while queue:
-        current = queue.popleft()
-        cx, cy = grid_pos[current]
+        # BFS placement on local grid
+        local_grid = {}  # node -> (col, row)
+        occupied = set()  # occupied (col, row) cells
 
-        for neighbor in G.neighbors(current):
-            if neighbor in grid_pos:
-                continue
+        local_grid[seed] = (0, 0)
+        occupied.add((0, 0))
+        queue = deque([seed])
 
-            direction = _best_direction(current, neighbor, G)
+        while queue:
+            current = queue.popleft()
+            cc, cr = local_grid[current]
 
-            if direction is None:
-                # Non-spatial exit (special text like "elsewhere", "away")
-                # Place adjacent in any free cell
-                target = _spiral_search((cx, cy), occupied)
-                grid_pos[neighbor] = target
-                occupied[target] = neighbor
+            for neighbor in sub.neighbors(current):
+                if neighbor in local_grid:
+                    continue
+                direction = _best_direction(current, neighbor, G)
+                if direction and direction in local_offsets:
+                    dc, dr = local_offsets[direction]
+                    target = (cc + dc, cr + dr)
+                else:
+                    # No spatial direction — try placing nearby
+                    target = (cc + 1, cr)
+
+                # Spiral search if occupied
+                if target in occupied:
+                    target = _local_spiral(target, occupied,
+                                           prefer_dx=target[0] - cc,
+                                           prefer_dy=target[1] - cr)
+                local_grid[neighbor] = target
+                occupied.add(target)
                 queue.append(neighbor)
-                continue
 
-            dx, dy = DIRECTION_OFFSETS[direction]
-            target = (cx + dx, cy + dy)
+        # Place any disconnected nodes in this region
+        for n in nodes:
+            if n not in local_grid:
+                target = _local_spiral((0, 0), occupied)
+                local_grid[n] = target
+                occupied.add(target)
 
-            if target in occupied:
-                target = _spiral_search(target, occupied, prefer_dx=dx, prefer_dy=dy)
+        if not local_grid:
+            continue
 
-            grid_pos[neighbor] = target
-            occupied[target] = neighbor
-            queue.append(neighbor)
+        # Convert local grid to pixel coords centered in region box
+        cols = [c for c, r in local_grid.values()]
+        rows = [r for c, r in local_grid.values()]
+        min_c, max_c = min(cols), max(cols)
+        min_r, max_r = min(rows), max(rows)
+        grid_w = (max_c - min_c) * cell_w
+        grid_h = (max_r - min_r) * cell_h
+
+        # Scale down if grid exceeds box
+        scale = 1.0
+        if grid_w > 0 and grid_w > bw - 40:
+            scale = min(scale, (bw - 40) / grid_w)
+        if grid_h > 0 and grid_h > bh - 40:
+            scale = min(scale, (bh - 40) / grid_h)
+
+        eff_cell_w = cell_w * scale
+        eff_cell_h = cell_h * scale
+
+        # Center grid in box
+        used_w = (max_c - min_c) * eff_cell_w
+        used_h = (max_r - min_r) * eff_cell_h
+        origin_x = bx + (bw - used_w) / 2
+        origin_y = by + (bh - used_h) / 2
+
+        for node, (c, r) in local_grid.items():
+            px = int(origin_x + (c - min_c) * eff_cell_w)
+            py = int(origin_y + (r - min_r) * eff_cell_h)
+            pixel_pos[node] = (px, py)
 
     # Track vertical-only edges
+    vertical_edges = set()
     for u, v in G.edges:
         all_dirs = []
         for d, _origin in G.edges[u, v].get("directions", []):
@@ -592,73 +593,100 @@ def _multi_seed_bfs(G, edges_raw):
         if vertical and not spatial:
             vertical_edges.add((u, v))
 
-    # Place singleton/small components at their region seed positions
-    for comp in singleton_components:
-        for node in comp:
-            if node in grid_pos:
-                continue
-            region = G.nodes[node].get("region", "special")
-            sx, sy = REGION_SEEDS.get(region, (0.5, 0.5))
-            gx = int(sx * GRID_W)
-            gy = int(sy * GRID_H)
-            cell = _spiral_search((gx, gy), occupied)
-            grid_pos[node] = cell
-            occupied[cell] = node
-
-    # Place any remaining unvisited nodes (shouldn't happen, but safety net)
-    for node in G.nodes:
-        if node not in grid_pos:
-            region = G.nodes[node].get("region", "special")
-            sx, sy = REGION_SEEDS.get(region, (0.5, 0.5))
-            gx = int(sx * GRID_W)
-            gy = int(sy * GRID_H)
-            cell = _spiral_search((gx, gy), occupied)
-            grid_pos[node] = cell
-            occupied[cell] = node
-
-    return grid_pos, vertical_edges
+    return pixel_pos, vertical_edges
 
 
-def _grid_to_pixels(grid_pos):
-    """Convert grid coordinates to pixel positions centered on the canvas."""
-    if not grid_pos:
-        return {}
+def _local_spiral(target, occupied, prefer_dx=0, prefer_dy=0, max_radius=60):
+    """Find nearest empty cell on a local grid with clearance=1."""
+    if target not in occupied:
+        return target
+    tx, ty = target
+    for radius in range(1, max_radius):
+        best = None
+        best_score = float("inf")
+        for dx in range(-radius, radius + 1):
+            for dy in range(-radius, radius + 1):
+                if abs(dx) != radius and abs(dy) != radius:
+                    continue
+                cell = (tx + dx, ty + dy)
+                if cell in occupied:
+                    continue
+                score = abs(dx) + abs(dy)
+                if prefer_dx and dx * prefer_dx > 0:
+                    score -= 0.5
+                if prefer_dy and dy * prefer_dy > 0:
+                    score -= 0.5
+                if score < best_score:
+                    best_score = score
+                    best = cell
+        if best is not None:
+            return best
+    return (tx + max_radius, ty)
 
-    gxs = [p[0] for p in grid_pos.values()]
-    gys = [p[1] for p in grid_pos.values()]
-    min_gx, max_gx = min(gxs), max(gxs)
-    min_gy, max_gy = min(gys), max(gys)
-    range_gx = max_gx - min_gx if max_gx != min_gx else 1
-    range_gy = max_gy - min_gy if max_gy != min_gy else 1
 
-    canvas_w = WIDTH - 2 * MARGIN
-    canvas_h = HEIGHT - 2 * MARGIN
+def _resolve_overlaps(pixel_pos, G):
+    """Nudge overlapping rooms apart based on actual label pixel widths."""
+    nodes = list(pixel_pos.keys())
+    if len(nodes) <= 1:
+        return pixel_pos
 
-    # Use uniform scale to preserve direction angles
-    scale = min(canvas_w / range_gx, canvas_h / range_gy)
+    # Precompute half-widths and half-heights for each node
+    pad_x, pad_y = 6, 3
+    half_sizes = {}
+    for n in nodes:
+        lbl = G.nodes[n].get("label", n)
+        lw = _label_pixel_width(lbl, FONT_ROOM)
+        hw = lw / 2 + pad_x + 4  # 4px extra margin
+        hh = 10 + pad_y + 2
+        half_sizes[n] = (hw, hh)
 
-    # Center the map
-    used_w = range_gx * scale
-    used_h = range_gy * scale
-    offset_x = MARGIN + (canvas_w - used_w) / 2
-    offset_y = MARGIN + (canvas_h - used_h) / 2
+    pos = dict(pixel_pos)
+    for iteration in range(50):
+        moved = False
+        for i in range(len(nodes)):
+            for j in range(i + 1, len(nodes)):
+                a, b = nodes[i], nodes[j]
+                ax, ay = pos[a]
+                bx, by = pos[b]
+                hw_a, hh_a = half_sizes[a]
+                hw_b, hh_b = half_sizes[b]
 
-    pixel_pos = {}
-    for node, (gx, gy) in grid_pos.items():
-        px = int(offset_x + (gx - min_gx) * scale)
-        py = int(offset_y + (gy - min_gy) * scale)
-        pixel_pos[node] = (px, py)
+                # Check overlap
+                overlap_x = (hw_a + hw_b) - abs(ax - bx)
+                overlap_y = (hh_a + hh_b) - abs(ay - by)
+                if overlap_x > 0 and overlap_y > 0:
+                    # Nudge along axis of least overlap
+                    if overlap_x < overlap_y:
+                        nudge = (overlap_x / 2) + 1
+                        if ax <= bx:
+                            pos[a] = (ax - nudge, ay)
+                            pos[b] = (bx + nudge, by)
+                        else:
+                            pos[a] = (ax + nudge, ay)
+                            pos[b] = (bx - nudge, by)
+                    else:
+                        nudge = (overlap_y / 2) + 1
+                        if ay <= by:
+                            pos[a] = (ax, ay - nudge)
+                            pos[b] = (bx, by + nudge)
+                        else:
+                            pos[a] = (ax, ay + nudge)
+                            pos[b] = (bx, by - nudge)
+                    moved = True
+        if not moved:
+            break
 
-    return pixel_pos
+    # Convert back to int
+    return {n: (int(x), int(y)) for n, (x, y) in pos.items()}
 
 
 def compute_layout(G, edges_raw):
-    """Compute room positions using direction-faithful BFS grid layout."""
+    """Compute room positions using per-region grid layout with overlap resolution."""
     if len(G.nodes) == 0:
         return {}, set()
 
-    grid_pos, vertical_edges = _multi_seed_bfs(G, edges_raw)
-    pixel_pos = _grid_to_pixels(grid_pos)
+    pixel_pos, vertical_edges = _region_grid_layout(G, edges_raw)
+    pixel_pos = _resolve_overlaps(pixel_pos, G)
 
     return pixel_pos, vertical_edges
 
@@ -685,7 +713,7 @@ def load_font(size):
     return ImageFont.load_default()
 
 
-FONT_ROOM = load_font(10)
+FONT_ROOM = load_font(11)
 FONT_REGION = load_font(18)
 FONT_TITLE = load_font(28)
 FONT_LEGEND = load_font(12)
@@ -724,40 +752,72 @@ def draw_room_box(draw, x, y, label, region):
     draw.text((x - tw // 2, y - th // 2), label, fill=text_color, font=FONT_ROOM)
 
 
-def draw_connection(draw, pos, id1, id2, color=(140, 140, 160, 200), width=2):
-    """Draw a line between two rooms."""
+def _route_orthogonal(x1, y1, x2, y2, direction):
+    """Return a list of (x, y) waypoints that route a connection orthogonally.
+
+    For cardinal directions (N/S/E/W), the line goes along the primary axis
+    first, then turns 90 degrees to reach the destination.
+    For diagonal directions (NE/NW/SE/SW), a 45-degree line is appropriate
+    so we return a direct path.
+    For unknown directions, route horizontally then vertically.
+    """
+    if direction in ("north", "south"):
+        # Go vertical first, then horizontal
+        return [(x1, y1), (x1, y2), (x2, y2)]
+    elif direction in ("east", "west"):
+        # Go horizontal first, then vertical
+        return [(x1, y1), (x2, y1), (x2, y2)]
+    elif direction in ("northeast", "northwest", "southeast", "southwest"):
+        # Diagonal is appropriate — straight line
+        return [(x1, y1), (x2, y2)]
+    else:
+        # Unknown — route horizontal then vertical
+        return [(x1, y1), (x2, y1), (x2, y2)]
+
+
+def draw_connection(draw, pos, id1, id2, G, color=(140, 140, 160, 200), width=2):
+    """Draw an orthogonally-routed line between two rooms."""
     if id1 not in pos or id2 not in pos:
         return
     x1, y1 = pos[id1]
     x2, y2 = pos[id2]
-    draw.line([(x1, y1), (x2, y2)], fill=color, width=width)
+    direction = _best_direction(id1, id2, G)
+    waypoints = _route_orthogonal(x1, y1, x2, y2, direction)
+    for i in range(len(waypoints) - 1):
+        draw.line([waypoints[i], waypoints[i + 1]], fill=color, width=width)
 
 
-def draw_dashed_line(draw, x1, y1, x2, y2, color=(150, 150, 170, 120),
-                     width=2, steps=30):
-    """Draw a dashed line between two points."""
-    for i in range(0, steps, 2):
-        t1 = i / steps
-        t2 = min((i + 1) / steps, 1.0)
-        sx = int(x1 + (x2 - x1) * t1)
-        sy = int(y1 + (y2 - y1) * t1)
-        ex = int(x1 + (x2 - x1) * t2)
-        ey = int(y1 + (y2 - y1) * t2)
-        draw.line([(sx, sy), (ex, ey)], fill=color, width=width)
+def draw_dashed_line(draw, x1, y1, x2, y2, direction=None,
+                     color=(150, 150, 170, 120), width=2, steps=30):
+    """Draw a dashed line between two points, orthogonally routed."""
+    waypoints = _route_orthogonal(x1, y1, x2, y2, direction)
+    # Dash along the full path
+    for seg in range(len(waypoints) - 1):
+        sx, sy = waypoints[seg]
+        ex, ey = waypoints[seg + 1]
+        for i in range(0, steps, 2):
+            t1 = i / steps
+            t2 = min((i + 1) / steps, 1.0)
+            px1 = int(sx + (ex - sx) * t1)
+            py1 = int(sy + (ey - sy) * t1)
+            px2 = int(sx + (ex - sx) * t2)
+            py2 = int(sy + (ey - sy) * t2)
+            draw.line([(px1, py1), (px2, py2)], fill=color, width=width)
 
 
 def draw_vertical_connection(draw, pos, id1, id2,
                              color=(160, 100, 200, 200), width=2):
-    """Draw a dotted purple line for up/down connections with a ↕ indicator."""
+    """Draw a dotted purple line for up/down connections with a UD indicator."""
     if id1 not in pos or id2 not in pos:
         return
     x1, y1 = pos[id1]
     x2, y2 = pos[id2]
-    draw_dashed_line(draw, x1, y1, x2, y2, color=color, width=width, steps=20)
-    # Draw ↕ indicator at midpoint
+    draw_dashed_line(draw, x1, y1, x2, y2, direction=None,
+                     color=color, width=width, steps=20)
+    # Draw UD indicator at midpoint
     mx = (x1 + x2) // 2
     my = (y1 + y2) // 2
-    draw.text((mx - 3, my - 6), "\u2195", fill=color, font=FONT_SMALL)
+    draw.text((mx - 3, my - 6), "UD", fill=color, font=FONT_SMALL)
 
 
 # ---------------------------------------------------------------------------
@@ -835,11 +895,19 @@ def render(G, pos, out_dir, vertical_edges=None):
     img = Image.new("RGBA", (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img, "RGBA")
 
+    # Region boundary boxes (semi-transparent rounded rectangles)
+    for region, (bx, by, bw, bh) in REGION_BOXES.items():
+        fill = PALETTE.get(region, PALETTE["special"])[0]
+        bg_color = (fill[0], fill[1], fill[2], 18)
+        border_color = (fill[0], fill[1], fill[2], 50)
+        draw.rounded_rectangle([bx, by, bx + bw, by + bh], radius=12,
+                               fill=bg_color, outline=border_color, width=1)
+
     # Region labels
     region_labels = compute_region_label_positions(G, pos)
     for label, lx, ly, rkey in region_labels:
         fill = PALETTE.get(rkey, PALETTE["special"])[0]
-        color = (fill[0], fill[1], fill[2], 120)
+        color = (fill[0], fill[1], fill[2], 140)
         draw.text((max(5, lx), max(5, ly)), label, fill=color, font=FONT_REGION)
 
     # Draw lake water if shore rooms exist
@@ -872,10 +940,12 @@ def render(G, pos, out_dir, vertical_edges=None):
             if (u, v) in vertical_edges or (v, u) in vertical_edges:
                 draw_vertical_connection(draw, pos, u, v)
             elif (u, v) in long_edges or (v, u) in long_edges:
+                direction = _best_direction(u, v, G)
                 draw_dashed_line(draw, pos[u][0], pos[u][1],
-                                 pos[v][0], pos[v][1])
+                                 pos[v][0], pos[v][1],
+                                 direction=direction)
             else:
-                draw_connection(draw, pos, u, v)
+                draw_connection(draw, pos, u, v, G)
 
     # Room boxes
     for node in G.nodes:
@@ -896,7 +966,7 @@ def render(G, pos, out_dir, vertical_edges=None):
               fill=(160, 155, 140), font=FONT_LEGEND)
 
     # Compass Rose
-    cx, cy = WIDTH - 80, 80
+    cx, cy = WIDTH - 100, 100
     r = 30
     draw.line([(cx, cy - r), (cx, cy + r)], fill=(180, 180, 190), width=2)
     draw.line([(cx - r, cy), (cx + r, cy)], fill=(180, 180, 190), width=2)
@@ -906,7 +976,7 @@ def render(G, pos, out_dir, vertical_edges=None):
                   fill=(200, 200, 210), font=FONT_LEGEND)
 
     # Legend
-    legend_x, legend_y = WIDTH - 200, 160
+    legend_x, legend_y = WIDTH - 220, 200
     draw.text((legend_x, legend_y - 25), "REGIONS",
               fill=(200, 195, 180), font=FONT_LEGEND)
     items = [
