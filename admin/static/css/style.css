@@ -463,6 +463,109 @@ input:focus, select:focus {
   top: 0.75rem;
   right: 0.75rem;
   z-index: 1000;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.map-search {
+  width: 200px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--fg);
+}
+
+.map-search-results {
+  display: none;
+  position: absolute;
+  top: 2.5rem;
+  right: 0.75rem;
+  z-index: 1001;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+  min-width: 250px;
+  box-shadow: var(--shadow-lg);
+}
+
+.map-search-item {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--fg);
+}
+
+.map-search-item:hover {
+  background: var(--surface-hover);
+}
+
+.room-popup-container .leaflet-popup-content-wrapper {
+  background: var(--surface, #1e293b);
+  color: var(--fg, #f5f5f5);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+}
+
+.room-popup-container .leaflet-popup-tip {
+  background: var(--surface, #1e293b);
+}
+
+.room-popup-title {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.room-popup-info {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-bottom: 0.15rem;
+}
+
+.room-popup-exits {
+  font-size: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.room-popup-exits .exit-link {
+  display: inline-block;
+  margin: 0.1rem 0.25rem;
+  padding: 0.1rem 0.35rem;
+  background: rgba(59, 130, 246, 0.15);
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.region-label {
+  background: transparent !important;
+  border: none !important;
+}
+
+.room-label-icon {
+  background: transparent !important;
+  border: none !important;
+  text-align: center;
+  pointer-events: none;
+}
+
+.room-label-icon span {
+  font-size: 10px;
+  color: rgba(240, 240, 240, 0.9);
+  white-space: nowrap;
+}
+
+.room-tooltip {
+  background: rgba(30, 41, 59, 0.95);
+  color: #f5f5f5;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
 }
 
 /* ===== Status Badge ===== */

@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import json
 import math
 import os
 import re
@@ -1181,6 +1182,91 @@ def generate_world_map_txt(G, pos, out_dir):
 
 
 # ---------------------------------------------------------------------------
+# JSON export for interactive map viewer
+# ---------------------------------------------------------------------------
+
+def generate_json(G, pos, edges_raw, vertical_edges, out_dir):
+    """Generate world-map.json for the interactive Leaflet map viewer."""
+    os.makedirs(out_dir, exist_ok=True)
+
+    # Build exits dict per room from directed edges
+    exits_by_room = defaultdict(dict)
+    for src, direction, dst in edges_raw:
+        if src in G.nodes and dst in G.nodes:
+            exits_by_room[src][direction] = dst
+
+    # Regions
+    regions = {}
+    for region_key, (bx, by, bw, bh) in REGION_BOXES.items():
+        fill, border, _ = PALETTE.get(region_key, PALETTE["special"])
+        _, _, text = PALETTE.get(region_key, PALETTE["special"])
+        regions[region_key] = {
+            "displayName": REGION_DISPLAY_NAMES.get(region_key, region_key.upper()),
+            "box": [bx, by, bw, bh],
+            "fill": list(fill),
+            "border": list(border),
+            "text": list(text),
+        }
+
+    # Rooms
+    rooms = {}
+    for node in G.nodes:
+        if node not in pos:
+            continue
+        x, y = pos[node]
+        label = G.nodes[node].get("label", node)
+        region = G.nodes[node].get("region", "special")
+        lw = _label_pixel_width(label, FONT_ROOM)
+        rooms[node] = {
+            "label": label,
+            "region": region,
+            "x": x,
+            "y": y,
+            "labelWidth": lw,
+            "file": "room/" + node + ".c",
+            "exits": exits_by_room.get(node, {}),
+        }
+
+    # Edges with waypoints
+    long_edges = find_long_connections(G, pos)
+    edges_out = []
+    for u, v in G.edges:
+        if u not in pos or v not in pos:
+            continue
+        x1, y1 = pos[u]
+        x2, y2 = pos[v]
+        if (u, v) in vertical_edges or (v, u) in vertical_edges:
+            edge_type = "vertical"
+            waypoints = _route_orthogonal(x1, y1, x2, y2, None)
+        elif (u, v) in long_edges or (v, u) in long_edges:
+            edge_type = "long"
+            direction = _best_direction(u, v, G)
+            waypoints = _route_orthogonal(x1, y1, x2, y2, direction)
+        else:
+            edge_type = "normal"
+            direction = _best_direction(u, v, G)
+            waypoints = _route_orthogonal(x1, y1, x2, y2, direction)
+        edges_out.append({
+            "from": u,
+            "to": v,
+            "type": edge_type,
+            "waypoints": waypoints,
+        })
+
+    data = {
+        "canvas": {"width": WIDTH, "height": HEIGHT},
+        "regions": regions,
+        "rooms": rooms,
+        "edges": edges_out,
+    }
+
+    out_path = os.path.join(out_dir, "world-map.json")
+    with open(out_path, "w") as f:
+        json.dump(data, f)
+    print(f"JSON data saved to {os.path.abspath(out_path)}")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -1214,6 +1300,9 @@ def main():
     print("Generating text files ...")
     generate_connectivity_txt(G, edges, out_dir)
     generate_world_map_txt(G, pos, out_dir)
+
+    print("Generating JSON data ...")
+    generate_json(G, pos, edges, vertical_edges, out_dir)
 
     print("Done!")
 

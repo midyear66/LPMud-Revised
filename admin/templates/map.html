@@ -11,11 +11,13 @@
   <p>LPmud 2.4.5 — interactive room map (zoom and drag)</p>
 </div>
 
-{% if map_exists %}
-<div class="map-container" id="map">
+{% if map_exists or data_exists %}
+<div class="map-container" id="map" data-has-json="{{ 'true' if data_exists else 'false' }}">
   <div class="map-controls">
+    <input type="text" id="map-search" class="map-search" placeholder="Search rooms..." autocomplete="off" />
     <button id="reset-view" class="btn btn-sm" title="Reset view">Reset View</button>
   </div>
+  <div id="map-search-results" class="map-search-results"></div>
 </div>
 {% else %}
 <div class="card">
@@ -27,7 +29,7 @@
 {% endblock %}
 
 {% block scripts %}
-{% if map_exists %}
+{% if map_exists or data_exists %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 {% endif %}
