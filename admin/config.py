@@ -28,7 +28,7 @@ class Config:
     LPMUD_CONTAINER_NAME = os.environ.get("LPMUD_CONTAINER_NAME", "lpmud-server")
 
     # Session
-    SESSION_TIMEOUT_MINUTES = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "30"))
+    SESSION_TIMEOUT_MINUTES = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "480"))
     PERMANENT_SESSION_LIFETIME = SESSION_TIMEOUT_MINUTES * 60
 
     # Rate limiting

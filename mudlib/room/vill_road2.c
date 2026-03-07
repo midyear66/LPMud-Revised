@@ -7,6 +7,8 @@ string * a_chat_str;
 string * action, * type, * match;
 
 void start_harry();
+void delayed_say(string msg);
+void idle_nag_player();
 
 void reset(int arg) {
     dest_dir = ({ "room/vill_road1","west",
@@ -29,18 +31,24 @@ void reset(int arg) {
 void start_harry() {
     if(!harry) {
 	if (!chat_str) {
-	    chat_str = allocate(10);
-	    a_chat_str = allocate(8);
+	    chat_str = allocate(16);
+	    a_chat_str = allocate(10);
 	    chat_str[0] = "Harry says: What are you waiting for?\n";
 	    chat_str[1] = "Harry says: Hello there!\n";
-	    chat_str[2] = "Harry says: I don't like winter.\n";
-	    chat_str[3] = "Harry says: I don't like snow.\n";
-	    chat_str[4] = "Harry says: I don't like rain.\n";
+	    chat_str[2] = "Harry says: Got any food? I'm starving.\n";
+	    chat_str[3] = "Harry hums tunelessly to himself.\n";
+	    chat_str[4] = "Harry fidgets and looks around nervously.\n";
 	    chat_str[5] = "Harry says: Who are you?\n";
 	    chat_str[6] = "Harry says: Why do you look like that?\n";
 	    chat_str[7] = "Harry says: What are you doing here?\n";
-	    chat_str[8] = "Harry says: Nice weather, isn't it?\n";
+	    chat_str[8] = "Harry says: Did I ever tell you about the time I almost killed a dragon? Well, I saw one. From far away.\n";
 	    chat_str[9] = "Harry smiles.\n";
+	    chat_str[10] = "Harry says: I tried to be an adventurer once. It didn't go well.\n";
+	    chat_str[11] = "Harry picks at a loose thread on his shirt.\n";
+	    chat_str[12] = "Harry says: You know, you're one of my favorite people. Don't tell anyone.\n";
+	    chat_str[13] = "Harry says: I wonder what's for dinner.\n";
+	    chat_str[14] = "Harry glances around as if expecting something exciting to happen.\n";
+	    chat_str[15] = "Harry says: Do you think people like me? Be honest.\n";
 	    a_chat_str[0] = "Harry says: Don't hit me!\n";
 	    a_chat_str[1] = "Harry says: That hurt!\n";
 	    a_chat_str[2] = "Harry says: Help, someone!\n";
@@ -49,10 +57,12 @@ void start_harry() {
 	    a_chat_str[5] = "Harry says: I hate bashers!\n";
 	    a_chat_str[6] = "Harry says: Bastard\n";
 	    a_chat_str[7] = "Harry says: You big brute!\n";
+	    a_chat_str[8] = "Harry says: I thought we were FRIENDS!\n";
+	    a_chat_str[9] = "Harry says: I'll remember this! I WILL!\n";
 
-	    action = allocate(12);
-	    type = allocate(12);
-	    match = allocate(12);
+	    action = allocate(22);
+	    type = allocate(22);
+	    match = allocate(22);
 
 	    action[0] = "why_did";
 	    type[0] = "sells";
@@ -75,10 +85,25 @@ void start_harry() {
 	    type[10] = "leaves";
 	    action[11] = "gives";
 	    type[11] = "gives";
+	    action[12] = "react_emote";
+	    type[12] = "hugs you";
+	    type[13] = "pokes you";
+	    type[14] = "kicks you";
+	    type[15] = "slaps you";
+	    type[16] = "cuddles you";
+	    type[17] = "growls at you";
+	    action[18] = "react_wield";
+	    type[18] = "wields";
+	    action[19] = "react_wear";
+	    type[19] = "wears";
+	    action[20] = "react_laugh";
+	    type[20] = "falls down laughing";
+	    action[21] = "react_yawn";
+	    type[21] = "yawns";
 	}
 	harry = clone_object("obj/monster");
 	/* Reuse the same arrays. */
-	harry->load_chat(2, chat_str);
+	harry->load_chat(5, chat_str);
 	harry->load_a_chat(20, a_chat_str);
 	harry->set_match(this_object(), action, type, match);
 	harry->set_name("harry");
@@ -92,7 +117,7 @@ void start_harry() {
 	harry->set_wc(5);
 	harry->set_aggressive(0);
 	move_object(harry, this_object());
-	
+
 	harry->set_random_pick(20);
 	harry->set_move_at_reset(0);
     }
@@ -102,9 +127,16 @@ void notify(string str) {
     say(str);
     write(str);
 }
-	
+
+void delayed_say(string msg) {
+    if (!harry || !living(harry))
+	return;
+    tell_room(environment(harry), msg);
+}
+
 void why_did(string str) {
     string who, what;
+    int rand;
     sscanf(str, "%s %s", who, what);
     if(who == "harry" || who == "Harry")
 	return;
@@ -112,7 +144,15 @@ void why_did(string str) {
 	notify("Harry says: Why did you sell " + what + "\n");
     }
     if (sscanf(str, "%s attacks %s.", who, what) == 2) {
-	notify("Harry says: Why is " + who + " attacking " + what + "?\n");
+	rand = random(4);
+	if (rand == 0)
+	    notify("Harry says: Why is " + who + " attacking " + what + "?\n");
+	else if (rand == 1)
+	    notify("Harry says: Fight! Fight! Fight!\n");
+	else if (rand == 2)
+	    notify("Harry hides behind the nearest person.\n");
+	else
+	    notify("Harry watches with wide eyes.\n");
     }
     if (sscanf(str, "%s left the game.", who) == 1) {
 	notify("Harry says: Why did " + who + " quit the game ?\n");
@@ -149,13 +189,45 @@ void smiles(string str) {
 
 void say_hello(string str) {
     string who;
+    int rand;
     if (sscanf(str, "%s arrives.", who) == 1) {
-	notify( "Harry says: Hi " + who + ", nice to see you !\n");
+	rand = random(5);
+	if (rand == 0)
+	    notify("Harry says: Hi " + who + ", nice to see you !\n");
+	else if (rand == 1)
+	    notify("Harry says: " + who + "! My BEST friend!\n");
+	else if (rand == 2)
+	    notify("Harry waves enthusiastically at " + who + ".\n");
+	else if (rand == 3) {
+	    notify("Harry says: Oh hi " + who + "!\n");
+	    call_out("delayed_say", 3,
+		"Harry says: I was JUST talking about you!\n");
+	}
+	else
+	    notify("Harry runs up to " + who + " and grins.\n");
+	call_out("idle_nag_player", 90);
+    }
+}
+
+void idle_nag_player() {
+    object ob;
+    if (!harry || !living(harry))
+	return;
+    ob = first_inventory(environment(harry));
+    while (ob) {
+	if (living(ob) && ob != harry && query_idle(ob) > 60) {
+	    tell_room(environment(harry),
+		"Harry pokes " + ob->query_name() + " and says: Hey! Are you still alive?\n");
+	    call_out("idle_nag_player", 90);
+	    return;
+	}
+	ob = next_inventory(ob);
     }
 }
 
 void test_say(string str) {
     string a, b, message;
+    int rand;
 
     sscanf(str, "%s %s", a, b);
     if(a == "harry" || a == "Harry")
@@ -176,15 +248,63 @@ void test_say(string str) {
 	sscanf(str, "%sget lost%s", a, b) == 2) {
 	message = "Harry says: Ok then.\n";
     }
-    if(!message)
-	message = "Harry says: Why do you say '" + str + "'???\n";
+    if (!message) {
+	if (sscanf(str, "%sharry%s", a, b) == 2 ||
+	    sscanf(str, "%sHarry%s", a, b) == 2) {
+	    rand = random(3);
+	    if (rand == 0)
+		message = "Harry says: Did someone say my name?!\n";
+	    else if (rand == 1)
+		message = "Harry perks up and says: Yes? YES?\n";
+	    else
+		message = "Harry beams proudly.\n";
+	}
+	else if (sscanf(str, "%shelp%s", a, b) == 2) {
+	    message = "Harry says: I would help, but I'm not very good at anything.\n";
+	}
+	else if (sscanf(str, "%sfood%s", a, b) == 2 ||
+		 sscanf(str, "%seat%s", a, b) == 2 ||
+		 sscanf(str, "%shungry%s", a, b) == 2) {
+	    message = "Harry says: Did someone say food? I'm STARVING.\n";
+	}
+	else if (sscanf(str, "%squest%s", a, b) == 2 ||
+		 sscanf(str, "%sadventure%s", a, b) == 2) {
+	    message = "Harry says: Ooh, can I come? Please? PLEASE?\n";
+	}
+	else if (sscanf(str, "%sstupid%s", a, b) == 2 ||
+		 sscanf(str, "%sidiot%s", a, b) == 2 ||
+		 sscanf(str, "%sannoying%s", a, b) == 2) {
+	    message = "Harry says: That's not very nice.\n";
+	}
+    }
+    if (!message) {
+	rand = random(10);
+	if (rand < 3) {
+	    message = "Harry says: '" + str + "'? What do you mean, '" + str + "'?\n";
+	}
+	else if (rand < 5) {
+	    message = "Harry says: Why do you say '" + str + "'???\n";
+	}
+	else if (rand < 7) {
+	    message = "Harry nods knowingly.\n";
+	}
+	else if (rand < 9) {
+	    message = "Harry says: Tell me more!\n";
+	}
+	else {
+	    message = "Harry says: Hmm, yes, quite.\n";
+	}
+    }
     notify(message);
 }
 
 void follow(string str) {
     string who, where;
-    if(sscanf(str, "%s leaves %s.\n", who, where) == 2)
+    if(sscanf(str, "%s leaves %s.\n", who, where) == 2) {
+	if (random(100) < 30)
+	    notify("Harry says: Wait for me, " + who + "!\n");
 	harry->init_command(where);
+    }
 }
 
 void gives(string str) {
@@ -236,7 +356,94 @@ void gives(string str) {
 	transfer(obj, find_living(lower_case(who)));
 	notify("Harry returned the " + what + " to " + who + ".\n");
     } else {
-	notify("Harry says: Thank you very much, sir.\n");
+	rand = random(4);
+	if (rand == 0)
+	    notify("Harry says: Thank you very much, sir.\n");
+	else if (rand == 1)
+	    notify("Harry says: For ME?! You shouldn't have!\n");
+	else if (rand == 2)
+	    notify("Harry clutches the " + what + " lovingly.\n");
+	else
+	    notify("Harry says: I shall treasure this forever!\n");
+    }
+}
+
+void react_emote(string str) {
+    string who, rest;
+    if (sscanf(str, "%s hugs you%s", who, rest) == 2) {
+	notify("Harry hugs " + who + " back and won't let go.\n");
+	call_out("delayed_say", 4,
+	    "Harry finally releases his grip and sighs contentedly.\n");
+    }
+    else if (sscanf(str, "%s pokes you%s", who, rest) == 2) {
+	notify("Harry says: Hey! What was that for?!\n");
+	call_out("delayed_say", 2,
+	    "Harry pokes " + who + " in the ribs.\n");
+    }
+    else if (sscanf(str, "%s kicks you%s", who, rest) == 2) {
+	notify("Harry whimpers pitifully.\n");
+	call_out("delayed_say", 5,
+	    "Harry says: It's okay. I forgive you.\n");
+    }
+    else if (sscanf(str, "%s slaps you%s", who, rest) == 2) {
+	notify("Harry says: OW! I probably deserved that.\n");
+    }
+    else if (sscanf(str, "%s cuddles you%s", who, rest) == 2) {
+	notify("Harry purrs contentedly.\n");
+    }
+    else if (sscanf(str, "%s growls at you%s", who, rest) == 2) {
+	notify("Harry cowers behind the nearest object.\n");
+	call_out("delayed_say", 3,
+	    "Harry peeks out cautiously.\n");
+    }
+}
+
+void react_wield(string str) {
+    string who, what;
+    if (random(100) < 25)
+	return;
+    if (sscanf(str, "%s wields %s.\n", who, what) == 2) {
+	if (who == "Harry") return;
+	if (random(2) == 0)
+	    notify("Harry says: Ooh, can I hold the " + what + "?\n");
+	else
+	    notify("Harry takes a nervous step back.\n");
+    }
+}
+
+void react_wear(string str) {
+    string who, what;
+    if (random(100) < 33)
+	return;
+    if (sscanf(str, "%s wears %s.\n", who, what) == 2) {
+	if (who == "Harry") return;
+	notify("Harry says: That looks great on you!\n");
+    }
+}
+
+void react_laugh(string str) {
+    string who;
+    int rand;
+    if (sscanf(str, "%s falls down laughing", who) == 1) {
+	if (who == "Harry") return;
+	rand = random(3);
+	if (rand == 0)
+	    notify("Harry laughs along, not entirely sure what's funny.\n");
+	else if (rand == 1)
+	    notify("Harry says: What's so funny?!\n");
+	else
+	    notify("Harry giggles uncontrollably.\n");
+    }
+}
+
+void react_yawn(string str) {
+    string who;
+    if (sscanf(str, "%s yawns", who) == 1) {
+	if (who == "Harry") return;
+	if (random(2) == 0)
+	    notify("Harry yawns too.\n");
+	else
+	    notify("Harry says: Am I BORING you?!\n");
     }
 }
 

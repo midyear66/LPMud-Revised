@@ -138,6 +138,7 @@ The following changes have been made beyond the original 2.4.5 mudlib (use `mudl
 - **Forest Remedy Quest** — Multi-step fetch quest starting with a wounded traveler in `room/deep_forest1`. Player finds Doctor Willem (`room/doctor_hut` off `narr_alley`), who needs a silverleaf herb to make a remedy. The old herbalist (`room/herbalist_hut` off `forest6`) can hint at where the herb grows. Player collects the herb from a random forest room, brings it back to the doctor who creates a healing medicine, then delivers it to the traveler. Exclusive (one player at a time), awards 500 XP and the `forest_remedy` quest flag for wizard promotion. Controller: `obj/forest_quest.c`.
 - **The Restless Dead Quest** — Combat + puzzle quest for mid-level players (4-8), starting in the cemetery north of the church (`room/cemetery`). Brother Cedric asks the player to enter an ancient crypt and lay the spirit of the sorcerer Valdris to rest. Player receives holy water, fights through skeleton guardians in a dark 3-room crypt (`room/crypt/`), uses the holy water to break a ward on the tomb, then defeats the Wraith of Valdris (level 7 boss). Exclusive (one player at a time), awards 750 XP, wearable enchanted silver ring (AC 1), and the `restless_dead` quest flag for wizard promotion. Controller: `obj/crypt_quest.c`.
 - **Underground Rail** — Fast-travel mine cart system connecting four stations: Village, Eastroad Inn, Plains Crossing, and Orc Valley. The cart runs a continuous loop on a ~60-second circuit, pausing 10 seconds at each stop. Players `board` the cart and `exit` at their destination. Stations are accessed via `down` from surface rooms. Train object: `obj/train.c`, station rooms: `room/station.c`, `room/station_east.c`, `room/station_plains.c`, `room/station_orc.c`, sign: `obj/sign.c`.
+- **Harry NPC overhaul** — Harry (`room/vill_road2.c`) has expanded chat lines (16 idle, 10 combat), varied reactions to arrivals/attacks/speech, and responds to emotes (hug, poke, kick, slap, cuddle, growl), equipment actions (wield, wear), and social commands (laugh, yawn). He also follows players between rooms and nags idle visitors.
 - **Bug fixes** — Runtime error logging in `obj/master.c`, relaxed wizard level check in `obj/leo.c`, `query_ip_name`/`query_ip_number` crash guard for non-interactive objects in `obj/simul_efun.c`.
 
 > **Convention:** When adding new public areas to the mudlib, document them in this section.
@@ -229,7 +230,7 @@ docker compose -f docker/docker-compose.yml up -d admin
 ### Security
 
 - Single admin password via `ADMIN_PASSWORD` env var (timing-safe comparison)
-- Session-based auth with 30-minute inactivity timeout
+- Session-based auth with 8-hour inactivity timeout (configurable via `SESSION_TIMEOUT_MINUTES`)
 - Login rate limiting (5 attempts/minute, then 60-second lockout)
 - CSRF protection on all forms (Flask-WTF)
 - Security headers: CSP, X-Frame-Options, X-Content-Type-Options
