@@ -1,6 +1,6 @@
 # LPmud Server and Admin Panel (Dockerized)
 
-Recreating a classic LPmud server using [ldmud](https://github.com/ldmud/ldmud) as the game driver, running the LPmud 2.4.5 mudlib — all packaged in a Docker container for easy deployment.
+Recreating a classic LPmud server using [ldmud](https://github.com/ldmud/ldmud) as the game driver, running the LPmud 2.4.5 mudlib, with a Flask-based admin panel for server management, player editing, backups, and an interactive world map — all packaged in Docker for easy deployment.
 
 ## Overview
 
