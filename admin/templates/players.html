@@ -90,7 +90,7 @@
   <a href="{{ url_for('players.player_add') }}" class="btn btn-primary btn-sm">+ Add Player</a>
 </div>
 
-<div class="card">
+<div class="card" data-status-url="{{ url_for('players.players_status') }}">
   <div class="card-header">Player Save Files</div>
   {% if players %}
   <div class="table-wrap">
@@ -122,6 +122,13 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-danger">Delete</button>
               </form>
+              {% if p.status == "online" %}
+              <span class="badge badge-success" data-player="{{ p.name }}">Online</span>
+              {% elif p.status == "stale" %}
+              <span class="badge badge-warning" data-player="{{ p.name }}">Stale</span>
+              {% else %}
+              <span class="badge badge-info" data-player="{{ p.name }}">Offline</span>
+              {% endif %}
             </div>
           </td>
         </tr>
@@ -135,5 +142,9 @@
   </div>
   {% endif %}
 </div>
+{% endif %}
+
+{% if players is not none and not editing and not adding %}
+<script src="{{ url_for('static', filename='js/players.js') }}"></script>
 {% endif %}
 {% endblock %}

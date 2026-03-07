@@ -40,6 +40,11 @@
 #    define TRANSFER(a,b) funcall(symbol_function('transfer), a,b)
 #endif
 
+void clear_online_markers();
+void mark_player_online(string pname);
+void mark_player_offline(string pname);
+void mark_player_disconnected(string pname);
+
 #ifdef MUDWHO
 static void mudwho_init(int arg);
 static void mudwho_connect (object ob);
@@ -498,6 +503,9 @@ void inaugurate_master (int arg)
   set_driver_hook(H_NOTIFY_FAIL, "What?\n");
   set_driver_hook(H_INCLUDE_DIRS, #'_include_dirs_hook);
   set_driver_hook(H_AUTO_INCLUDE, #'_auto_include_hook);
+
+    if (!arg)
+        call_out("clear_online_markers", 1);
 }
 
 //---------------------------------------------------------------------------
@@ -755,6 +763,8 @@ void disconnect (object obj)
 
 {
     mudwho_disconnect(ob);
+    if (obj)
+        mark_player_disconnected(({string})obj->query_real_name());
 }
 
 //---------------------------------------------------------------------------
@@ -2180,6 +2190,55 @@ string master_create_wizard(string owner, string domain, object caller)
 	}
     }
     return castle;
+}
+
+//---------------------------------------------------------------------------
+// Online player tracking
+//
+// Two marker directories track player state for the admin panel:
+//   players/.online/    -- in-game presence (login/quit)
+//   players/.connected/ -- active telnet connection (login/disconnect)
+// Both directories are cleared on server startup to remove stale markers.
+//---------------------------------------------------------------------------
+
+void clear_online_markers()
+{
+    string *files;
+
+    mkdir("/players/.online");
+    files = get_dir("/players/.online/*");
+    if (files) {
+        int i;
+        for (i = 0; i < sizeof(files); i++)
+            rm("/players/.online/" + files[i]);
+    }
+
+    mkdir("/players/.connected");
+    files = get_dir("/players/.connected/*");
+    if (files) {
+        int i;
+        for (i = 0; i < sizeof(files); i++)
+            rm("/players/.connected/" + files[i]);
+    }
+}
+
+void mark_player_online(string pname)
+{
+    mkdir("/players/.online");
+    write_file("/players/.online/" + pname, "");
+    mkdir("/players/.connected");
+    write_file("/players/.connected/" + pname, "");
+}
+
+void mark_player_offline(string pname)
+{
+    rm("/players/.online/" + pname);
+    rm("/players/.connected/" + pname);
+}
+
+void mark_player_disconnected(string pname)
+{
+    rm("/players/.connected/" + pname);
 }
 
 /****************************************************************************/

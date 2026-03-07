@@ -24,12 +24,14 @@ mudlib/log/*
 .claude/
 
 # =========================
-# Build artifacts
+# Build artifacts / core dumps
 # =========================
 *.o
 *.a
 *.so
 *.dylib
+core
+core.*
 
 # =========================
 # Archives (large files)

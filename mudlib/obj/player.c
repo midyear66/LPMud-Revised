@@ -643,6 +643,7 @@ int teleport(string dest) {
 }
 
 int quit() {
+    "obj/master"->mark_player_offline(name);
     save_me(0);
     drop_all(1);
     write("Saving "); write(capitalize(name)); write(".\n");
@@ -1377,6 +1378,7 @@ static void move_player_to_start3(mixed where) {
     }
     if (is_invis && level < 20)
         vis();
+    "obj/master"->mark_player_online(name);
     if (!is_invis)
         say(cap_name + " enters the game.\n");
     else

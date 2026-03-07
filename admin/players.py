@@ -5,7 +5,7 @@ import re
 
 from flask import (
     Blueprint, render_template, request, redirect,
-    url_for, flash, current_app,
+    url_for, flash, current_app, jsonify,
 )
 
 from auth import login_required
@@ -152,12 +152,22 @@ def players_list():
     save_dir = _save_dir()
     players = []
     if os.path.isdir(save_dir):
+        online_dir = os.path.join(save_dir, ".online")
+        connected_dir = os.path.join(save_dir, ".connected")
         for f in sorted(os.listdir(save_dir)):
             if f.endswith(".o"):
                 name = f[:-2]
                 path = os.path.join(save_dir, f)
                 data = _parse_save_file(path)
                 stat = os.stat(path)
+                in_game = os.path.isfile(os.path.join(online_dir, name))
+                connected = os.path.isfile(os.path.join(connected_dir, name))
+                if in_game and connected:
+                    status = "online"
+                elif in_game:
+                    status = "stale"
+                else:
+                    status = "offline"
                 players.append({
                     "name": name,
                     "level": data.get("level", "?"),
@@ -167,6 +177,7 @@ def players_list():
                     "gender": {"0": "Neuter", "1": "Male", "2": "Female"}.get(
                         data.get("gender", "0"), "?"
                     ),
+                    "status": status,
                 })
     return render_template("players.html", players=players, editing=None, adding=False)
 
@@ -212,6 +223,29 @@ def player_delete(name):
     os.remove(path)
     flash(f"Deleted player '{name}'.", "success")
     return redirect(url_for("players.players_list"))
+
+
+@players_bp.route("/players/status")
+@login_required
+def players_status():
+    """Return JSON mapping of player name to status for polling."""
+    save_dir = _save_dir()
+    online_dir = os.path.join(save_dir, ".online")
+    connected_dir = os.path.join(save_dir, ".connected")
+    statuses = {}
+    if os.path.isdir(save_dir):
+        for f in os.listdir(save_dir):
+            if f.endswith(".o"):
+                name = f[:-2]
+                in_game = os.path.isfile(os.path.join(online_dir, name))
+                connected = os.path.isfile(os.path.join(connected_dir, name))
+                if in_game and connected:
+                    statuses[name] = "online"
+                elif in_game:
+                    statuses[name] = "stale"
+                else:
+                    statuses[name] = "offline"
+    return jsonify(statuses)
 
 
 @players_bp.route("/players/<name>")
