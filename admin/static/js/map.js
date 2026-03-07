@@ -150,12 +150,16 @@
           var exits = roomData.exits;
           var exitKeys = Object.keys(exits);
           if (exitKeys.length > 0) {
-            html += '<div class="room-popup-exits">Exits:';
+            html += '<div class="room-popup-exits">';
             for (var ek = 0; ek < exitKeys.length; ek++) {
               var dir = exitKeys[ek];
               var dest = exits[dir];
               var destLabel = data.rooms[dest] ? data.rooms[dest].label : dest;
-              html += ' <a href="#" class="exit-link" data-room="' + escapeAttr(dest) + '">' + escapeHtml(dir) + '</a>';
+              var destRoom = data.rooms[dest];
+              var destRegion = destRoom && data.regions[destRoom.region]
+                ? data.regions[destRoom.region].displayName : "";
+              var destInfo = destRegion ? destLabel + " — " + destRegion : destLabel;
+              html += '<a href="#" class="exit-link" data-room="' + escapeAttr(dest) + '">' + escapeHtml(dir) + ' → ' + escapeHtml(destInfo) + '</a>';
             }
             html += '</div>';
           }

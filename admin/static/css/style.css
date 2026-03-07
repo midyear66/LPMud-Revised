@@ -533,7 +533,7 @@ input:focus, select:focus {
 }
 
 .room-popup-exits .exit-link {
-  display: inline-block;
+  display: block;
   margin: 0.1rem 0.25rem;
   padding: 0.1rem 0.35rem;
   background: rgba(59, 130, 246, 0.15);
