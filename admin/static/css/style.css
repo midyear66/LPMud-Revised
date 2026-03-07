@@ -302,6 +302,12 @@ tr:hover td {
   line-height: 1;
 }
 
+.btn.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: default;
+}
+
 .btn-block {
   display: flex;
   width: 100%;

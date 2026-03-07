@@ -115,7 +115,11 @@
           <td>{{ p.experience }}</td>
           <td>
             <div class="btn-group">
-              <a href="{{ url_for('players.player_edit', name=p.name) }}" class="btn btn-sm">Edit</a>
+              {% if p.status in ("online", "stale") %}
+              <span class="btn btn-sm disabled" data-edit="{{ p.name }}" data-href="{{ url_for('players.player_edit', name=p.name) }}">Edit</span>
+              {% else %}
+              <a href="{{ url_for('players.player_edit', name=p.name) }}" class="btn btn-sm" data-edit="{{ p.name }}">Edit</a>
+              {% endif %}
               <form method="post" action="{{ url_for('players.player_delete', name=p.name) }}"
                     style="display:inline"
                     data-confirm="Delete {{ p.name }}? This cannot be undone.">
