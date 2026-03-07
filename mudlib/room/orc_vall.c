@@ -74,8 +74,10 @@ void extra_reset()
     }
 }
 
-TWO_EXIT("room/slope", "east",
+THREE_EXIT("room/slope", "east",
 	 "room/fortress", "north",
+	 "room/station_orc", "down",
 	 "The orc valley",
 	 "You are in the orc valley. This place is inhabited by orcs.\n" +
-	 "There is a fortress to the north, with lot of signs of orcs.\n", 1)
+	 "There is a fortress to the north, with lot of signs of orcs.\n" +
+	 "Stone stairs lead down to an underground station.\n", 1)

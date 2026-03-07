@@ -1,5 +1,5 @@
 /*
- * Village Station - Underground rail stop beneath the village center.
+ * Plains Crossing Station - Underground rail stop beneath the central plains.
  */
 
 inherit "room/room";
@@ -7,8 +7,8 @@ inherit "room/room";
 void reset(int arg) {
     if (arg) return;
     set_light(1);
-    short_desc = "Village Station";
-    dest_dir = ({ "room/vill_road2", "up" });
+    short_desc = "Plains Crossing Station";
+    dest_dir = ({ "room/plane11", "up" });
     items = ({
 	"tracks", "Steel rails run along a channel in the floor, disappearing into dark tunnels",
 	"rails", "Steel rails run along a channel in the floor, disappearing into dark tunnels",
@@ -57,7 +57,7 @@ void long(string str) {
 
     write("You are in an underground station carved from solid rock. Steel rails\n" +
 	  "run along a channel in the floor, disappearing into dark tunnels.\n" +
-	  "A wooden sign shows the rail schedule. Stone stairs lead up to the village.\n");
+	  "A wooden sign shows the rail schedule. Stone stairs lead up to the plains.\n");
 
     train = find_object("obj/train");
     if (train) {

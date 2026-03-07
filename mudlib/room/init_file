@@ -9,6 +9,7 @@ obj/treasure
 obj/weapon
 obj/armour
 room/death/death_mark
+obj/train.c
 #
 # All lines below this comments are for loading wizard castles.
 #
