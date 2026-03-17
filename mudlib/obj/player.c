@@ -40,6 +40,7 @@ static void move_player_to_start3(mixed where);
 void save_me(int value_items);
 int illegal_patch(string what);
 void add_standard_commands();
+static string resolve_path(string str);
 static void wiz_commands();
 static void wiz_commands2();
 mixed valid_read(string str, int lvl);
@@ -159,7 +160,7 @@ static void try_throw_out(string str)
 int valid_name(string str)
 {
     int i, length;
-    if (str == "logon") {
+    if (str == "logon" || str == "guest") {
         write("Invalid name");
         return 0;
     }
@@ -227,8 +228,6 @@ static void logon2(string str) {
     else
         input_to("new_password", 1);
     write("Password: ");
-    if (name == "guest")
-        write("(just CR) ");
     attacker_ob = 0;
     alt_attacker_ob = 0;
     return;
@@ -633,8 +632,8 @@ int teleport(string dest) {
         }
         return 1;
     }
-    dest = valid_read(dest, WIZ);
-    if (!dest || file_size("/" + dest + ".c") <= 0) {
+    dest = resolve_path(dest);
+    if (!dest) {
         write("Invalid monster name or file name: " + dest + "\n");
         return 1;
     }
@@ -1210,7 +1209,7 @@ static void check_password(string p)
     remove_call_out("time_out");
     if (password == 0)
         write("You have no password ! Set it with the 'password' cmd.\n");
-    else if (name != "guest" && crypt(p, password) != password) {
+    else if (crypt(p, password) != password) {
         write("Wrong password!\n");
         destruct(myself);
         return;
@@ -2286,7 +2285,7 @@ int clone(string str) {
         write("Clone what object ?\n");
         return 1;
     }
-    str = valid_read(str, WIZ);
+    str = resolve_path(str);
     if (!str) {
         write("Invalid file.\n");
         return 1;
@@ -2474,6 +2473,36 @@ mixed valid_read(string str, int lvl) {
         return file;
     write("Bad file name: " + str + "\n");
     return 0;                /* Should not happen */
+}
+
+static string resolve_path(string str) {
+    string *dirs;
+    string path;
+    int i;
+
+    /* Try direct path first */
+    path = valid_read(str, WIZ);
+    if (path && file_size("/" + path + ".c") > 0)
+	return path;
+
+    /* Strip .c extension if provided */
+    if (sscanf(str, "%s.c", path) == 1)
+	str = path;
+
+    /* Search common directories */
+    dirs = ({
+	"room", "room/south", "room/crypt", "room/mine",
+	"room/orc_fortress", "room/sub", "room/maze1",
+	"room/death", "obj", "doc/examples"
+    });
+    i = 0;
+    while (i < sizeof(dirs)) {
+	path = dirs[i] + "/" + str;
+	if (file_size("/" + path + ".c") > 0)
+	    return path;
+	i += 1;
+    }
+    return 0;
 }
 
 static int wiz_score_list(string arg) {

@@ -1,48 +1,23 @@
-void reset(int started)
-{
-    if (!started)
+/*
+ * South forest room 35 - converted to inherit style for fairy glade exit.
+ */
+
+inherit "room/room";
+
+void reset(int arg) {
+    if (!arg) {
 	set_light(1);
-}
-
-void init()
-{
-    add_action("north", "north");
-    add_action("south", "south");
-    add_action("east", "east");
-    add_action("west", "west");
-}
-
-string short()
-{
-    return "A dimly lit forest";
-}
-
-void long()
-{
-    write("You are in part of a dimly lit forest.\n" +
-	  "Trails lead north, south, east and west\n");
-}
-
-int north()
-{
-    this_player()->move_player("north#room/south/sforst33");
-    return 1;
-}
-
-int south()
-{
-    this_player()->move_player("south#room/south/sforst38");
-    return 1;
-}
-
-int east()
-{
-    this_player()->move_player("east#room/south/sforst34");
-    return 1;
-}
-
-int west()
-{
-    this_player()->move_player("west#room/south/sforst36");
-    return 1;
+	short_desc = "A dimly lit forest";
+	long_desc =
+"You are in part of a dimly lit forest.\n" +
+"Through the trees to the northeast, you glimpse a soft, ethereal glow.\n" +
+"Trails lead north, south, east and west.\n";
+	dest_dir = ({
+	    "room/south/sforst33", "north",
+	    "room/south/sforst38", "south",
+	    "room/south/sforst34", "east",
+	    "room/south/sforst36", "west",
+	    "room/south/fairy_glade", "northeast"
+	});
+    }
 }

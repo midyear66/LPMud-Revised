@@ -63,6 +63,7 @@ void random_move();
 void test_match(string str);
 void heal_slowly();
 void pick_any_obj();
+void send_prompt_to_room();
 
 void reset(int arg)
 {
@@ -111,6 +112,7 @@ void heart_beat()
 	if(have_text && talk_ob) {
 	    have_text = 0;
 	    test_match(the_text);
+	    send_prompt_to_room();
 	} else {
 	    set_heart_beat(0);
 	    if (!healing)
@@ -140,11 +142,13 @@ void heart_beat()
 	    if(c < a_chat_chance){
 		c = random(sizeof(a_chat_head));
 		tell_room(environment(), a_chat_head[c]);
+		send_prompt_to_room();
 	    }
 	} else {
 	    if(c < chat_chance && chat_chance){
 		c = random(sizeof(chat_head));
 		tell_room(environment(), chat_head[c]);
+		send_prompt_to_room();
 	    }
 	}
     }
@@ -156,6 +160,7 @@ void heart_beat()
     if(have_text && talk_ob) {
 	have_text = 0;
 	test_match(the_text);
+	send_prompt_to_room();
     }
 }
 
@@ -374,6 +379,19 @@ void init() {
 object query_create_room() { return create_room; }
 
 string query_race() { return race; }
+
+void send_prompt_to_room() {
+    object ob;
+    object env;
+    env = environment(this_object());
+    if (!env) return;
+    ob = first_inventory(env);
+    while (ob) {
+	if (interactive(ob))
+	    tell_object(ob, "> ");
+	ob = next_inventory(ob);
+    }
+}
 
 void  test_match(string str) {
     string who, str1, type, match, func;
