@@ -1101,6 +1101,7 @@ static int emote(string str) {
 
 int inventory() {
     object ob;
+    int gold;
     if (test_dark())
         return 1;
     ob = first_inventory(myself);
@@ -1113,6 +1114,11 @@ int inventory() {
         }
         ob = next_inventory(ob);
     }
+    gold = query_money();
+    if (gold > 0)
+        write("Gold: " + gold + " coins.\n");
+    else
+        write("You have no gold.\n");
     return 1;
 }
 
