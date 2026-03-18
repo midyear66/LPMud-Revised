@@ -69,7 +69,7 @@ void extra_reset()
 		     jem->set_id("emerald");
 		     jem->set_short("an emerald");
 		 }
-	     if (jemnum == 3)
+	     if (jemnum == 2)
 		 {
 		     jem->set_id("sapphire");
 		     jem->set_short("a sapphire");

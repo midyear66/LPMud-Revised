@@ -148,7 +148,7 @@ Use `mudlib-orig/` to diff against the unmodified source.
 - **Bank vault** — Persistent bank vault in `room/bank.c` where players can deposit/withdraw gold and store/retrieve items. Data survives logoff and server restarts via per-player vault files (`players/<name>/bank.vault`). A bank clerk NPC narrates transactions with flavor text. Commands: `deposit`, `withdraw`, `balance`, `store`, `retrieve`, `vault`. Supports weapons, armour, and treasure items with full property serialization. Max 20 items per vault. Controller: `obj/bank_vault.c`.
 - **Inventory gold display** — The `i` (inventory) command now shows carried gold coins alongside items.
 - **NPC prompt fix** — NPC ambient chat and `set_match` responses from heartbeats now re-display the `> ` command prompt afterward, so players no longer need to press return to get their prompt back.
-- **Bug fixes** — Runtime error logging in `obj/master.c`, relaxed wizard level check in `obj/leo.c`, `query_ip_name`/`query_ip_number` crash guard for non-interactive objects in `obj/simul_efun.c`.
+- **Bug fixes** — Runtime error logging in `obj/master.c`, relaxed wizard level check in `obj/leo.c`, `query_ip_name`/`query_ip_number` crash guard for non-interactive objects in `obj/simul_efun.c`, wyrm gem drop fix in `room/south/lair.c` (sapphire could never drop due to off-by-one).
 
 > **Convention:** When adding new public areas to the mudlib, document them in this section.
 

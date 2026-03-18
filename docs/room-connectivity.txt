@@ -18,6 +18,8 @@ room/doctor_hut.c: "Doctor's hut" -> east:room/narr_alley
 room/herbalist_hut.c: "Herbalist's hut" -> north:room/forest6
 room/prison.c: "The local prison" -> (no exits)
 room/rum2.c: "Rum2" -> (no exits)
+room/south/fairy_glade.c: "A hidden fairy glade" -> southwest:room/south/sforst35
+room/south/grotto.c: "A corrupted grotto" -> out:room/south/sshore10
 room/station_east.c: "Eastroad Inn Station" -> up:room/eastroad5
 room/station_orc.c: "Orc Valley Station" -> up:room/orc_vall
 room/station_plains.c: "Plains Crossing Station" -> up:room/plane11
@@ -243,7 +245,7 @@ room/south/sforst31.c: "A dimly lit forest" -> north:room/south/sshore19, south:
 room/south/sforst32.c: "A dimly lit forest" -> north:room/south/sforst31, south:room/south/sforst36, east:room/south/sforst33
 room/south/sforst33.c: "A dimly lit forest" -> north:room/south/sshore18, south:room/south/sforst35, east:room/south/sshore17, west:room/south/sforst32
 room/south/sforst34.c: "A dimly lit forest" -> north:room/south/sshore17, south:room/south/sforst39, east:room/south/sshore16, west:room/south/sforst35
-room/south/sforst35.c: "A dimly lit forest" -> north:room/south/sforst33, south:room/south/sforst38, east:room/south/sforst34, west:room/south/sforst36
+room/south/sforst35.c: "A dimly lit forest" -> north:room/south/sforst33, south:room/south/sforst38, east:room/south/sforst34, west:room/south/sforst36, northeast:room/south/fairy_glade
 room/south/sforst36.c: "A dimly lit forest" -> north:room/south/sforst32, south:room/south/sforst37, east:room/south/sforst35
 room/south/sforst37.c: "A dimly lit forest" -> north:room/south/sforst36, south:room/south/sforst45, east:room/south/sforst38
 room/south/sforst38.c: "A dimly lit forest" -> north:room/south/sforst35, south:room/south/sforst44, east:room/south/sforst39, west:room/south/sforst37
@@ -270,7 +272,7 @@ CRESCENT LAKE SHORE
 ==============================================================================
 
 room/south/sshore1.c: "The shore of Crescent Lake" -> north:room/south/sforst8, south:room/south/sshore2, east:room/south/sforst9, northwest:room/south/sshore30
-room/south/sshore10.c: "The shore of Crescent Lake" -> east:room/south/sshore9, west:room/south/sshore11
+room/south/sshore10.c: "The shore of Crescent Lake" -> east:room/south/sshore9, west:room/south/sshore11, cave:room/south/grotto
 room/south/sshore11.c: "The shore of Crescent Lake" -> east:room/south/sshore10, west:room/south/sshore12
 room/south/sshore12.c: "The shore of Crescent Lake" -> east:room/south/sshore11, west:room/south/sshore13
 room/south/sshore13.c: "The shore of Crescent Lake" -> east:room/south/sshore12, west:room/south/sshore14
@@ -328,7 +330,7 @@ room/south/sislnd9.c: "A small grove on the shor..." -> north:room/south/sislnd1
 ROOM COUNT SUMMARY
 ==============================================================================
 
-  SPECIAL ROOMS: 14 rooms
+  SPECIAL ROOMS: 16 rooms
   VILLAGE: 20 rooms
   ELEVATOR SYSTEM: 4 rooms
   EAST ROAD: 8 rooms
@@ -345,4 +347,4 @@ ROOM COUNT SUMMARY
   CRESCENT LAKE SHORE: 30 rooms
   ISLE OF THE MAGI: 19 rooms
 
-  Total: 239 rooms
+  Total: 241 rooms
