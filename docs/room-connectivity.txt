@@ -14,6 +14,7 @@ room/crypt/entrance.c: "Crypt entrance" -> up:room/cemetery, south:room/crypt/pa
 room/crypt/passage.c: "Crypt passage" -> north:room/crypt/entrance, south:room/crypt/tomb
 room/crypt/tomb.c: "Valdris's tomb" -> north:room/crypt/passage
 room/death/death_room.c: "death's workroom" -> (no exits)
+room/def_workroom.c: "Workroom of " -> (no exits)
 room/doctor_hut.c: "Doctor's hut" -> east:room/narr_alley
 room/herbalist_hut.c: "Herbalist's hut" -> north:room/forest6
 room/prison.c: "The local prison" -> (no exits)
@@ -203,7 +204,7 @@ room/mine/tunnel23.c: "Tunnel" -> west:room/mine/tunnel22, east:room/mine/tunnel
 room/mine/tunnel24.c: "Tunnel" -> west:room/mine/tunnel23, down:room/mine/tunnel25
 room/mine/tunnel25.c: "Tunnel" -> up:room/mine/tunnel24, north:room/mine/tunnel26
 room/mine/tunnel26.c: "Tunnel" -> south:room/mine/tunnel25, north:room/mine/tunnel27, east:room/mine/tunnel28
-room/mine/tunnel27.c: "Dead end" -> south:room/mine/tunnel26
+room/mine/tunnel27.c: "Collapsed passage" -> south:room/mine/tunnel26
 room/mine/tunnel28.c: "Tunnel" -> west:room/mine/tunnel26, east:room/mine/tunnel29
 room/mine/tunnel29.c: "Dead end" -> west:room/mine/tunnel28
 room/mine/tunnel3.c: "Hole" -> south:room/mine/tunnel2, north:room/mine/tunnel4, down:room/mine/tunnel8
@@ -330,7 +331,7 @@ room/south/sislnd9.c: "A small grove on the shor..." -> north:room/south/sislnd1
 ROOM COUNT SUMMARY
 ==============================================================================
 
-  SPECIAL ROOMS: 16 rooms
+  SPECIAL ROOMS: 17 rooms
   VILLAGE: 20 rooms
   ELEVATOR SYSTEM: 4 rooms
   EAST ROAD: 8 rooms
@@ -347,4 +348,4 @@ ROOM COUNT SUMMARY
   CRESCENT LAKE SHORE: 30 rooms
   ISLE OF THE MAGI: 19 rooms
 
-  Total: 241 rooms
+  Total: 242 rooms
