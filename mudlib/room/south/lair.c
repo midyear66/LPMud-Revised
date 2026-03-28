@@ -77,6 +77,24 @@ void extra_reset()
  	    jem->set_alias("jem");
 	    jem->set_value(random(250) + 300);
 	     move_object(jem, wyrm);
+	     wyrm->set_dead_ob(this_object());
 	     move_object(wyrm, this_object());
 	 }
+}
+
+void monster_died(object killed) {
+    object book;
+    book = clone_object("obj/treasure");
+    book->set_id("spellbook");
+    book->set_alias("book");
+    book->set_short("an old spellbook");
+    book->set_long(
+"A leather-bound spellbook filled with arcane writing in a careful hand.\n" +
+"The name 'Aldric' is inscribed on the inside cover.\n");
+    book->set_value(0);
+    book->set_weight(2);
+    move_object(book, this_object());
+    tell_room(this_object(),
+"An old spellbook tumbles from the wyrm's hoard as the beast falls.\n");
+    wyrm = 0;
 }
