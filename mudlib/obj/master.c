@@ -2151,8 +2151,9 @@ string master_create_wizard(string owner, string domain, object caller)
  */
 
 {
-    string def_castle;
-    string dest, castle, wizard;
+    string def_castle, def_workroom;
+    string dest, castle, workroom, wizard;
+    string defines;
     object player;
 
     /* find_player() is a simul_efun. Resolve it at run time. */
@@ -2169,14 +2170,19 @@ string master_create_wizard(string owner, string domain, object caller)
     }
     wizard = "/players/" + owner;
     castle = "/players/" + owner + "/castle.c";
+    workroom = "/players/" + owner + "/workroom.c";
     if (file_size(wizard) == -1) {
 	tell_object(player, "You now have a home directory: " +
 		    wizard + "\n");
 	mkdir(wizard);
     }
     dest = object_name(environment(player));
-    def_castle = "#define NAME \"" + owner + "\"\n#define DEST \"" +
-	dest + "\"\n" + read_file("/room/def_castle.c");
+    defines = "#define NAME \"" + owner + "\"\n" +
+	"#define DEST \"" + dest + "\"\n" +
+	"#define DIRECTION \"south\"\n" +
+	"#define CASTLE_SHORT \"the castle of " + capitalize(owner) + "\"\n" +
+	"#define OPEN 0\n";
+    def_castle = defines + read_file("/room/def_castle.c");
     if (file_size(castle) > 0) {
 	tell_object(player, "You already had a castle !\n");
     } else {
@@ -2187,6 +2193,18 @@ string master_create_wizard(string owner, string domain, object caller)
 		tell_object(player, "It couldn't be loaded automatically!\n");
 	} else {
 	    tell_object(player, "Failed to make castle for you!\n");
+	}
+    }
+    /* Create workroom if it does not exist */
+    if (file_size(workroom) < 1) {
+	def_workroom = "#define NAME \"" + owner + "\"\n" +
+	    "#define DEST \"" + dest + "\"\n" +
+	    read_file("/room/def_workroom.c");
+	if (write_file(workroom, def_workroom)) {
+	    tell_object(player, "You now have a workroom: " +
+		workroom + "\n");
+	} else {
+	    tell_object(player, "Failed to create workroom!\n");
 	}
     }
     return castle;

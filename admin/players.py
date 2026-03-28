@@ -2,6 +2,7 @@
 
 import os
 import re
+import shutil
 
 from flask import (
     Blueprint, render_template, request, redirect,
@@ -221,6 +222,20 @@ def player_delete(name):
         return redirect(url_for("players.players_list"))
 
     os.remove(path)
+
+    # Clean up wizard directory (castle.c, workroom.c, etc.)
+    wizard_dir = os.path.join(_save_dir(), name)
+    if os.path.isdir(wizard_dir):
+        shutil.rmtree(wizard_dir)
+
+    # Remove castle entry from init_file
+    init_file = os.path.join(os.path.dirname(_save_dir()), "room", "init_file")
+    castle_line = f"players/{name}/castle.c"
+    if os.path.isfile(init_file):
+        lines = open(init_file).readlines()
+        lines = [l for l in lines if castle_line not in l]
+        open(init_file, "w").writelines(lines)
+
     flash(f"Deleted player '{name}'.", "success")
     return redirect(url_for("players.players_list"))
 
