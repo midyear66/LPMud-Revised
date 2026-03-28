@@ -87,7 +87,7 @@ room/sea_bottom.c: "Sea bottom" -> up:room/sea
 FOREST
 ==============================================================================
 
-room/clearing.c: "Clearing" -> east:room/forest1, west:room/forest2, north:room/plane1
+room/clearing.c: "Clearing" -> east:room/forest1, west:room/forest2, north:room/plane1, south:players/peace/rooms/castle_gate.c
 room/forest1.c: "In a forest" -> east:room/wild1, west:room/clearing
 room/forest2.c: "In a forest" -> east:room/clearing, west:room/slope
 room/hump.c: "Humpbacked bridge" -> east:room/vill_green, west:room/wild1
@@ -328,6 +328,12 @@ room/south/sislnd8.c: "The shore of the Isle of ..." -> north:room/south/sislnd1
 room/south/sislnd9.c: "A small grove on the shor..." -> north:room/south/sislnd11, east:room/south/sislnd17, southeast:room/south/sislnd8, northwest:room/south/sislnd10
 
 ==============================================================================
+PEACE'S CASTLE
+==============================================================================
+
+players/peace/rooms/castle_gate.c: "Castle Gate" -> north:room/clearing
+
+==============================================================================
 ROOM COUNT SUMMARY
 ==============================================================================
 
@@ -347,5 +353,6 @@ ROOM COUNT SUMMARY
   SOUTH FOREST: 49 rooms
   CRESCENT LAKE SHORE: 30 rooms
   ISLE OF THE MAGI: 19 rooms
+  PEACE'S CASTLE: 1 rooms
 
-  Total: 242 rooms
+  Total: 243 rooms

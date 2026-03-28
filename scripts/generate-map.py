@@ -268,6 +268,166 @@ def label_from_id(room_id):
     return name.replace("_", " ").title()
 
 
+def _parse_player_room(filepath, mudlib_path, room_id, region_key):
+    """Parse a single player room file and return (room_dict, edges)."""
+    rooms = {}
+    edges = []
+    try:
+        with open(filepath, "r", encoding="latin-1") as f:
+            content = f.read()
+    except OSError:
+        return rooms, edges
+
+    file_exits = []
+    file_exits.extend(parse_macro_exits(content))
+    file_exits.extend(parse_dest_dir(content))
+    file_exits.extend(parse_move_player(content))
+
+    seen = set()
+    for direction, dest in file_exits:
+        key = (direction, dest)
+        if key not in seen:
+            seen.add(key)
+            edges.append((room_id, direction, dest))
+
+    short = parse_short_desc(content)
+    label = truncate_label(short if short else label_from_id(room_id))
+    rooms[room_id] = (label, region_key)
+    return rooms, edges
+
+
+# Castle region color palette — cycles if more wizards than colors
+CASTLE_COLORS = [
+    ((180, 140, 200), (130,  90, 155), (40, 15, 55)),   # purple
+    ((140, 190, 180), ( 90, 145, 135), (15, 45, 40)),   # teal
+    ((200, 165, 130), (155, 120,  85), (50, 35, 15)),   # amber
+    ((160, 180, 210), (110, 130, 165), (20, 30, 55)),   # steel blue
+    ((195, 160, 160), (150, 115, 115), (50, 20, 20)),   # dusty rose
+    ((170, 195, 150), (120, 150, 100), (30, 45, 15)),   # sage
+]
+
+
+def discover_castle_exits(mudlib_path):
+    """Scan players/*/castle.c for open wizard castles.
+
+    Each castle drops itself into a room (DEST) and adds a directional exit
+    (DIRECTION) leading to a workroom path.  Only castles with OPEN 1 are
+    included.  Also discovers all rooms under players/<name>/rooms/.
+
+    Returns:
+        extra_edges: list[(drop_room_id, direction, dest_room_id)]
+        extra_rooms: dict[room_id -> (label, region)]
+        castle_regions: list[str]  — region keys for discovered castles
+    """
+    import glob as globmod
+    extra_edges = []
+    extra_rooms = {}
+    castle_regions = []
+    color_idx = 0
+    pattern = os.path.join(mudlib_path, "players", "*", "castle.c")
+    for filepath in sorted(globmod.glob(pattern)):
+        try:
+            with open(filepath, "r", encoding="latin-1") as f:
+                content = f.read()
+        except OSError:
+            continue
+
+        # Parse #define values (first occurrence wins, matching the C preprocessor)
+        defines = {}
+        for m in re.finditer(r'^\s*#\s*define\s+(\w+)\s+"([^"]*)"', content, re.MULTILINE):
+            if m.group(1) not in defines:
+                defines[m.group(1)] = m.group(2)
+
+        # Check OPEN flag
+        open_match = re.search(r'^\s*#\s*define\s+OPEN\s+(\d+)', content, re.MULTILINE)
+        if not open_match or open_match.group(1) != "1":
+            continue
+
+        dest_room = defines.get("DEST", "")
+        direction = defines.get("DIRECTION", "")
+        name = defines.get("NAME", "")
+        if not dest_room or not direction or not name:
+            continue
+
+        # Normalize the drop room to a room_id
+        drop_room_id = normalize_dest(dest_room)
+
+        # Find the workroom_path from reset().
+        # The path is often built via concatenation:
+        #   workroom_path = "players/" + NAME + "/rooms/castle_gate";
+        # Extract the expression, substitute NAME with the actual name,
+        # then concatenate all string literals.
+        wp_match = re.search(
+            r'workroom_path\s*=\s*(.+?)\s*;', content)
+        if wp_match:
+            expr = wp_match.group(1)
+            # Replace NAME token with the quoted name value
+            expr_resolved = re.sub(r'\bNAME\b', '"' + name + '"', expr)
+            # Extract and join all string fragments
+            parts = re.findall(r'"([^"]*)"', expr_resolved)
+            workroom_path = "".join(parts)
+        else:
+            workroom_path = "players/" + name + "/workroom"
+
+        # The workroom_path is relative to mudlib root
+        # Check that the destination file actually exists
+        dest_file = os.path.join(mudlib_path, workroom_path + ".c")
+        if not os.path.isfile(dest_file):
+            continue
+
+        # Set up this wizard's castle region
+        region_key = "castle_" + name
+        castle_regions.append(region_key)
+        colors = CASTLE_COLORS[color_idx % len(CASTLE_COLORS)]
+        color_idx += 1
+        PALETTE[region_key] = colors
+        REGION_DISPLAY_NAMES[region_key] = name.upper() + "'S CASTLE"
+
+        # Add the castle entry room
+        dest_room_id = workroom_path
+        try:
+            with open(dest_file, "r", encoding="latin-1") as f:
+                dest_content = f.read()
+            short = parse_short_desc(dest_content)
+        except OSError:
+            short = None
+        if not short:
+            short = name.capitalize() + "'s Castle"
+        label = truncate_label(short)
+        extra_rooms[dest_room_id] = (label, region_key)
+
+        # Edge from the drop room into the castle destination
+        extra_edges.append((drop_room_id, direction, dest_room_id))
+        # Return edge back (parse dest_dir from the destination room)
+        try:
+            dest_exits = parse_dest_dir(dest_content)
+            dest_exits.extend(parse_macro_exits(dest_content))
+            for d_dir, d_dest in dest_exits:
+                d_id = normalize_dest(d_dest)
+                extra_edges.append((dest_room_id, d_dir, d_id))
+        except Exception:
+            pass
+
+        # Discover all other rooms under players/<name>/rooms/
+        rooms_dir = os.path.join(mudlib_path, "players", name, "rooms")
+        if os.path.isdir(rooms_dir):
+            for dirpath, _dirnames, filenames in os.walk(rooms_dir):
+                for fname in sorted(filenames):
+                    if not fname.endswith(".c"):
+                        continue
+                    fpath = os.path.join(dirpath, fname)
+                    rel = os.path.relpath(fpath, mudlib_path)
+                    rid = rel[:-2]  # strip .c
+                    if rid == dest_room_id:
+                        continue  # already added above
+                    pr, pe = _parse_player_room(
+                        fpath, mudlib_path, rid, region_key)
+                    extra_rooms.update(pr)
+                    extra_edges.extend(pe)
+
+    return extra_edges, extra_rooms, castle_regions
+
+
 def discover_rooms(mudlib_path):
     """Walk mudlib/room/ and parse all .c files.
 
@@ -323,6 +483,21 @@ def discover_rooms(mudlib_path):
             rooms[room_id] = (label, region)
             for direction, dest in unique_exits:
                 edges.append((room_id, direction, dest))
+
+    # Discover wizard castle exits from players/*/castle.c
+    castle_edges, castle_rooms, castle_regions = discover_castle_exits(mudlib_path)
+    rooms.update(castle_rooms)
+    edges.extend(castle_edges)
+
+    # Assign bounding boxes for castle regions, stacked below existing regions
+    castle_box_x = 120
+    castle_box_y = 2200
+    for region_key in castle_regions:
+        n_rooms = sum(1 for _, (_, r) in castle_rooms.items()
+                      if r == region_key)
+        box_h = max(350, n_rooms * 120)
+        REGION_BOXES[region_key] = (castle_box_x, castle_box_y, 1000, box_h)
+        castle_box_y += box_h + 100
 
     return rooms, edges
 
@@ -998,9 +1173,14 @@ def render(G, pos, out_dir, vertical_edges=None):
         ("Elevator",       "elevator"),
         ("Special",        "special"),
     ]
+    # Append any dynamic castle regions
+    for key in sorted(PALETTE):
+        if key.startswith("castle_"):
+            wiz_name = key[len("castle_"):]
+            items.append((wiz_name.capitalize() + "'s Castle", key))
     for i, (name, key) in enumerate(items):
         y = legend_y + i * 22
-        fill_c, border_c, _ = PALETTE[key]
+        fill_c, border_c, _ = PALETTE.get(key, PALETTE["special"])
         draw.rounded_rectangle([legend_x, y, legend_x + 16, y + 14],
                                radius=2, fill=fill_c, outline=border_c)
         draw.text((legend_x + 22, y + 1), name,
@@ -1070,6 +1250,10 @@ def generate_connectivity_txt(G, edges_raw, out_dir):
         ("shore",        "CRESCENT LAKE SHORE"),
         ("island",       "ISLE OF THE MAGI"),
     ]
+    # Append dynamic castle regions
+    for key in sorted(REGION_DISPLAY_NAMES):
+        if key.startswith("castle_"):
+            region_order.append((key, REGION_DISPLAY_NAMES[key]))
 
     lines = []
     sep = "=" * 78
@@ -1093,10 +1277,13 @@ def generate_connectivity_txt(G, edges_raw, out_dir):
             label = G.nodes[node].get("label", node)
             room_exits = exits_by_room.get(node, [])
             if room_exits:
-                exit_str = ", ".join(f"{d}:room/{dst}" for d, dst in room_exits)
+                exit_str = ", ".join(
+                    f"{d}:{dst}.c" if dst.startswith("players/") else f"{d}:room/{dst}"
+                    for d, dst in room_exits)
             else:
                 exit_str = "(no exits)"
-            lines.append(f'room/{node}.c: "{label}" -> {exit_str}')
+            prefix = "" if node.startswith("players/") else "room/"
+            lines.append(f'{prefix}{node}.c: "{label}" -> {exit_str}')
         lines.append("")
 
     # Summary
@@ -1157,6 +1344,10 @@ def generate_world_map_txt(G, pos, out_dir):
         ("shore",        "CRESCENT LAKE SHORE"),
         ("island",       "ISLE OF THE MAGI"),
     ]
+    # Append dynamic castle regions
+    for key in sorted(REGION_DISPLAY_NAMES):
+        if key.startswith("castle_"):
+            region_order.append((key, REGION_DISPLAY_NAMES[key]))
 
     for region_key, region_title in region_order:
         if region_key not in rooms_by_region:
@@ -1223,7 +1414,7 @@ def generate_json(G, pos, edges_raw, vertical_edges, out_dir):
             "x": x,
             "y": y,
             "labelWidth": lw,
-            "file": "room/" + node + ".c",
+            "file": (node + ".c" if node.startswith("players/") else "room/" + node + ".c"),
             "exits": exits_by_room.get(node, {}),
         }
 
