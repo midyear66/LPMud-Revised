@@ -237,7 +237,7 @@ docker compose -f docker/docker-compose.yml up -d admin
 
 | Page | Description |
 |------|-------------|
-| **Dashboard** | Server overview — room count, player count, backup status, scheduler status |
+| **Dashboard** | Server overview — room count, player count, backup status, scheduler status. Graceful shutdown with configurable countdown (1-15 min) warns players in-game before stopping |
 | **Map** | Interactive world map viewer (Leaflet.js) — clickable rooms with popups showing exits (with destination name and region), region info, and file paths; room search; click-to-navigate exit links. Falls back to static PNG if JSON data is unavailable |
 | **Players** | Browse, create, edit, and delete player save files — stats, levels, inventory, flags. Live online/offline status badges poll every 10 seconds; editing is disabled while a player is online or stale to prevent save conflicts |
 | **Backups** | Create, download, restore, and delete tar.gz backups of mudlib, saves, or logs |

@@ -47,6 +47,7 @@ obj/rope.c
 obj/safe.c
 obj/shout_curse.c
 obj/shut.c
+obj/shutdown_watcher.c
 obj/sing.c
 obj/soft_drink.c
 obj/soul.c
