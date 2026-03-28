@@ -60,7 +60,7 @@ object me;
 object create_room;
 
 void random_move();
-void test_match(string str);
+int test_match(string str);
 void heal_slowly();
 void pick_any_obj();
 void send_prompt_to_room();
@@ -111,8 +111,8 @@ void heart_beat()
     if(!test_if_any_here()) {
 	if(have_text && talk_ob) {
 	    have_text = 0;
-	    test_match(the_text);
-	    send_prompt_to_room();
+	    if (test_match(the_text))
+		send_prompt_to_room();
 	} else {
 	    set_heart_beat(0);
 	    if (!healing)
@@ -159,8 +159,8 @@ void heart_beat()
     }
     if(have_text && talk_ob) {
 	have_text = 0;
-	test_match(the_text);
-	send_prompt_to_room();
+	if (test_match(the_text))
+	    send_prompt_to_room();
     }
 }
 
@@ -393,7 +393,7 @@ void send_prompt_to_room() {
     }
 }
 
-void  test_match(string str) {
+int test_match(string str) {
     string who, str1, type, match, func;
     int i;
 
@@ -411,10 +411,12 @@ void  test_match(string str) {
 	   sscanf(str,"%s " + type + " " + match + "\n",who) == 1 ||
 	   sscanf(str,"%s " + type + " " + match + " %s\n",who,str1) == 2)
 	{
-	    return call_other(talk_ob, func, str);
+	    call_other(talk_ob, func, str);
+	    return 1;
 	}
 	i += 1;
     }
+    return 0;
 }
 
 /*

@@ -61,7 +61,7 @@ void reset(int arg) {
 	);
 	marvus->load_chat(5, ({
 	    "Marvus stares sadly toward the old well.\n",
-	    "Marvus says: Aldric, brother... I will find your book.\n",
+	    "Marvus murmurs: Aldric, brother... I will find your book.\n",
 	    "Marvus mutters an incantation under his breath.\n"
 	}));
     }
@@ -108,7 +108,7 @@ void quest_talk(string str) {
 	return;
 
     player = find_living(lower_case(who));
-    if (!player)
+    if (!player || !interactive(player))
 	return;
 
     /* Only respond to quest-related keywords */
