@@ -1,7 +1,29 @@
+object monster;
+
 void reset(int started)
 {
     if (!started)
 	set_light(1);
+    if (!monster || !living(monster)) {
+	object money;
+	monster = clone_object("obj/monster");
+	monster->set_name("ogre");
+	monster->set_alias("forest ogre");
+	monster->set_level(12);
+	monster->set_hp(140);
+	monster->set_wc(16);
+	monster->set_ac(2);
+	monster->set_al(-300);
+	monster->set_aggressive(1);
+	monster->set_short("A forest ogre");
+	monster->set_long(
+"A towering ogre with mottled green skin and a crude wooden\n" +
+"club. It reeks of rotting meat and swamp water.\n");
+	move_object(monster, this_object());
+	money = clone_object("obj/money");
+	money->set_money(random(80));
+	move_object(money, monster);
+    }
 }
 
 void init()
@@ -18,8 +40,9 @@ string short()
 
 void long()
 {
-    write("You are in part of a dimly lit forest.\n" +
-	  "Trails lead north, south and east\n");
+    write("You are in part of a dimly lit forest. Broken branches and\n" +
+	  "trampled undergrowth mark the passage of something very large.\n" +
+	  "Trails lead north, south and east.\n");
 }
 
 int north()

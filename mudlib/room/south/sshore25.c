@@ -1,7 +1,30 @@
+object monster;
+
 void reset(int started)
 {
     if (!started)
 	set_light(1);
+    if (!monster || !living(monster)) {
+	object money;
+	monster = clone_object("obj/monster");
+	monster->set_name("troll");
+	monster->set_alias("shore troll");
+	monster->set_level(13);
+	monster->set_hp(150);
+	monster->set_wc(16);
+	monster->set_ac(3);
+	monster->set_al(-300);
+	monster->set_aggressive(1);
+	monster->set_short("A shore troll");
+	monster->set_long(
+"A squat, muscular troll with greenish skin covered in lake\n" +
+"weed. It has made a crude shelter from driftwood and bones\n" +
+"near the water's edge.\n");
+	move_object(monster, this_object());
+	money = clone_object("obj/money");
+	money->set_money(random(90));
+	move_object(money, monster);
+    }
 }
 
 void init()
@@ -19,11 +42,10 @@ string short()
 
 void long()
 {
-    write("You are standing on the shore of Crescent Lake, a beautiful and\n" +
-	  "clear lake. Out in the centre of the lake stands the Isle\n" +
-	  "of the Magi.\n" +
-	  "Trails lead into the forest to the south and west.\n" +
-	  "The shore of Crescent Lake continues northwest and southeast\n");
+    write("You are standing on the shore of Crescent Lake. A crude shelter\n" +
+	  "of driftwood and bones stands near the water's edge.\n" +
+	  "Trails lead into the forest to the north and east.\n" +
+	  "The shore of Crescent Lake continues northwest and southeast.\n");
 }
 
 int north()
