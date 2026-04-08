@@ -114,6 +114,9 @@ int do_deposit(string str) {
 	return 1;
     }
 
+    /* Ensure player directory exists for vault file */
+    "obj/master"->ensure_player_dir(this_player()->query_real_name());
+
     player = this_player();
     pname = player->query_real_name();
     current = player->query_money();
@@ -228,6 +231,9 @@ int do_store(string str) {
 
     player = this_player();
     pname = player->query_real_name();
+
+    /* Ensure player directory exists for vault file */
+    "obj/master"->ensure_player_dir(pname);
 
     ob = present(str, player);
     if (!ob) {

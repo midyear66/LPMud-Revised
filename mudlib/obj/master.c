@@ -2219,6 +2219,15 @@ string master_create_wizard(string owner, string domain, object caller)
 // Both directories are cleared on server startup to remove stale markers.
 //---------------------------------------------------------------------------
 
+/* Create a player directory if it doesn't exist. Called from bank.c etc.
+ * Must run in master context to bypass valid_write restrictions. */
+void ensure_player_dir(string player_name) {
+    string dir;
+    dir = "players/" + player_name;
+    if (file_size(dir) == -1)
+	mkdir(dir);
+}
+
 void clear_online_markers()
 {
     string *files;
