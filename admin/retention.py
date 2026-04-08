@@ -9,6 +9,7 @@ from datetime import datetime
 _DEFAULTS = {
     "enabled": True,
     "keep_daily": 7,
+    "keep_weekly": 4,
     "keep_monthly": 6,
     "keep_yearly": 3,
     "prune_manual": False,
@@ -62,6 +63,7 @@ def prune_backups(app_config):
         return []
 
     keep_daily = max(0, int(settings.get("keep_daily", 7)))
+    keep_weekly = max(0, int(settings.get("keep_weekly", 4)))
     keep_monthly = max(0, int(settings.get("keep_monthly", 6)))
     keep_yearly = max(0, int(settings.get("keep_yearly", 3)))
     prune_manual = settings.get("prune_manual", False)
@@ -95,6 +97,8 @@ def prune_backups(app_config):
     # Greedy tier assignment
     kept = set()
     daily_count = 0
+    weekly_seen = set()
+    weekly_count = 0
     monthly_seen = set()
     monthly_count = 0
     yearly_seen = set()
@@ -105,6 +109,14 @@ def prune_backups(app_config):
         if daily_count < keep_daily:
             kept.add(name)
             daily_count += 1
+            continue
+
+        # Weekly tier: keep 1 per unique ISO week
+        yw = ts.isocalendar()[:2]  # (year, week)
+        if yw not in weekly_seen and weekly_count < keep_weekly:
+            kept.add(name)
+            weekly_seen.add(yw)
+            weekly_count += 1
             continue
 
         # Monthly tier: keep 1 per unique (year, month)

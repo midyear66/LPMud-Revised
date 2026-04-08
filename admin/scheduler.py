@@ -344,13 +344,14 @@ def run_backup_now():
 def set_retention():
     try:
         keep_daily = int(request.form.get("keep_daily", "7"))
+        keep_weekly = int(request.form.get("keep_weekly", "4"))
         keep_monthly = int(request.form.get("keep_monthly", "6"))
         keep_yearly = int(request.form.get("keep_yearly", "3"))
     except ValueError:
         flash("Retention values must be integers.", "error")
         return redirect(url_for("scheduler.scheduler_view"))
 
-    if any(v < 0 for v in (keep_daily, keep_monthly, keep_yearly)):
+    if any(v < 0 for v in (keep_daily, keep_weekly, keep_monthly, keep_yearly)):
         flash("Retention values cannot be negative.", "error")
         return redirect(url_for("scheduler.scheduler_view"))
 
@@ -361,6 +362,7 @@ def set_retention():
     settings = {
         "enabled": enabled,
         "keep_daily": keep_daily,
+        "keep_weekly": keep_weekly,
         "keep_monthly": keep_monthly,
         "keep_yearly": keep_yearly,
         "prune_manual": prune_manual,

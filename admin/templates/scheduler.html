@@ -44,8 +44,8 @@
   <div class="card card-grid-item">
     <div class="card-header">Backup Retention</div>
     {% if retention.enabled %}
-    <div class="stat-value">{{ retention.keep_daily }}d / {{ retention.keep_monthly }}m / {{ retention.keep_yearly }}y</div>
-    <div class="stat-label">Keeping {{ retention.keep_daily }} daily, {{ retention.keep_monthly }} monthly, {{ retention.keep_yearly }} yearly</div>
+    <div class="stat-value">{{ retention.keep_daily }}d / {{ retention.keep_weekly }}w / {{ retention.keep_monthly }}m / {{ retention.keep_yearly }}y</div>
+    <div class="stat-label">Keeping {{ retention.keep_daily }} daily, {{ retention.keep_weekly }} weekly, {{ retention.keep_monthly }} monthly, {{ retention.keep_yearly }} yearly</div>
     {% else %}
     <div class="stat-value" style="opacity:0.4">Disabled</div>
     <div class="stat-label">No automatic pruning</div>
@@ -110,6 +110,11 @@
         <label for="keep_daily">Keep daily</label>
         <input type="number" id="keep_daily" name="keep_daily" min="0" max="365"
                value="{{ retention.keep_daily }}" style="width: 80px;">
+      </div>
+      <div class="form-group">
+        <label for="keep_weekly">Keep weekly</label>
+        <input type="number" id="keep_weekly" name="keep_weekly" min="0" max="52"
+               value="{{ retention.keep_weekly }}" style="width: 80px;">
       </div>
       <div class="form-group">
         <label for="keep_monthly">Keep monthly</label>
