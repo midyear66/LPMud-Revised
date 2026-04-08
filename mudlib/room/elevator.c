@@ -73,7 +73,7 @@ int press(string button) {
     if (b == "3" || b == "three")
 	dest = 3;
     if (dest == level) {
-	write("You are alread at level " + dest + ".\n");
+	write("You are already at level " + dest + ".\n");
 	return 1;
     }
     if (dest > level) {

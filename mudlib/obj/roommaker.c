@@ -51,8 +51,11 @@ int make(string str)
 		return 1;
 	}
 
-	if(sscanf(str, "%s.%s", temp1, temp2) > 0) {
-		write(". and .. is not allowed in filenames!\n");
+	if(str == "." || str == ".." ||
+	   sscanf(str, "../%s", temp1) > 0 ||
+	   sscanf(str, "%s/../%s", temp1, temp2) > 0 ||
+	   sscanf(str, "%s/..", temp1) > 0) {
+		write(". and .. are not allowed in filenames!\n");
 		return 1;
 	}
 
@@ -265,8 +268,8 @@ int set_dir_file(string str)
 		dir_array[dir_cnt] = str;
 		dir_cnt += 2;
 
-		if(dir_cnt >= (sizeof(dir_array) + 2)) {
-			write("Maximum number of exist reached!\n");
+		if(dir_cnt >= sizeof(dir_array)) {
+			write("Maximum number of exits reached!\n");
 			if(in_edit) {
 				edit_dirs("");
 				return 1;
@@ -419,8 +422,8 @@ int edit_dirs(string str) {
 			return 1;
 		}
 		if(sel == 'a') {
-			if(dir_cnt >= (sizeof(dir_array) + 2)) {
-				write("Maximum number of exist reached!\n");
+			if(dir_cnt >= sizeof(dir_array)) {
+				write("Maximum number of exits reached!\n");
 			} else {
 				write("direction " + (1 + dir_cnt/2) + " command (end with **): ");
 				input_to("set_dir_cmd");
@@ -438,11 +441,11 @@ int edit_dirs(string str) {
 			} else {
 				if(sscanf(str, "c%d", num) != 1) {
 					write("usage: c#\n");
-					write("where # is a number " + 1 + "-" + dir_cnt/2 +1 + "\n");
+					write("where # is a number 1-" + (dir_cnt/2) + "\n");
 				} else {
-					if(num < 1 || num > dir_cnt/2 +1) {
+					if(num < 1 || num > dir_cnt/2) {
 						write("usage: c#\n");
-						write("where # is a number " + 1 + "-" + dir_cnt/2 +1 + "\n");
+						write("where # is a number 1-" + (dir_cnt/2) + "\n");
 					} else {
 						num -= 1;
 						num *= 2;
@@ -461,11 +464,11 @@ int edit_dirs(string str) {
 			} else {
 				if(sscanf(str, "d%d", num) != 1) {
 					write("usage: d#\n");
-					write("where # is a number " + 1 + "-" + dir_cnt/2 +1 + "\n");
+					write("where # is a number 1-" + (dir_cnt/2) + "\n");
 				} else {
-					if(num < 1 || num > dir_cnt/2 +1) {
+					if(num < 1 || num > dir_cnt/2) {
 						write("usage: d#\n");
-						write("where # is a number " + 1 + "-" + dir_cnt/2 +1 + "\n");
+						write("where # is a number 1-" + (dir_cnt/2) + "\n");
 					} else {
 						num -= 1;
 						num *= 2;
@@ -615,7 +618,7 @@ void do_file()
 	add_line("}");
 
 	add_line("string query_room_maker() {");
-	add_line("    return " + VERSION + ";");
+	add_line("    return \"" + VERSION + "\";");
 	add_line("}");
 
 	add_line("");
@@ -755,7 +758,7 @@ void long()
 {
 	write("A portable room maker, for lazy wizards...\n");
 	write("usage: make roomfilename\n");
-	write("Do \"help room maker\n for more information.\n");
+	write("Do \"help room maker\" for more information.\n");
 }
 
 

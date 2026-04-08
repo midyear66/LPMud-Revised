@@ -161,7 +161,7 @@ int valid_name(string str)
 {
     int i, length;
     if (str == "logon" || str == "guest") {
-        write("Invalid name");
+        write("Invalid name.\n");
         return 0;
     }
     length = sizeof(str);
@@ -632,9 +632,11 @@ int teleport(string dest) {
         }
         return 1;
     }
+    string orig_dest;
+    orig_dest = dest;
     dest = resolve_path(dest);
     if (!dest) {
-        write("Invalid monster name or file name: " + dest + "\n");
+        write("Invalid monster name or file name: " + orig_dest + "\n");
         return 1;
     }
     move_player("X#" + dest);
