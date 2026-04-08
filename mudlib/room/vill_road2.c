@@ -55,7 +55,7 @@ void start_harry() {
 	    a_chat_str[3] = "Harry says: Why can't you go bullying elsewhere?\n";
 	    a_chat_str[4] = "Harry says: Aooooo\n";
 	    a_chat_str[5] = "Harry says: I hate bashers!\n";
-	    a_chat_str[6] = "Harry says: Bastard\n";
+	    a_chat_str[6] = "Harry says: You brute!\n";
 	    a_chat_str[7] = "Harry says: You big brute!\n";
 	    a_chat_str[8] = "Harry says: I thought we were FRIENDS!\n";
 	    a_chat_str[9] = "Harry says: I'll remember this! I WILL!\n";

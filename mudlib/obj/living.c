@@ -485,7 +485,9 @@ int attack()
     tmp += spell_dam;
     if (tmp == 0) {
 	tell_object(this_object(), "You missed.\n");
-	say(cap_name + " missed " + name_of_attacker + ".\n");
+	tell_object(attacker_ob, cap_name + " missed you.\n");
+	say(cap_name + " missed " + name_of_attacker + ".\n",
+	    attacker_ob);
 	spell_cost = 0;
 	spell_dam = 0;
 	return 1;

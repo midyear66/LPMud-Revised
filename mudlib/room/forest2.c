@@ -22,7 +22,7 @@ void extra_reset() {
 	troll->set_spell_mess1(
 		   "The troll says: Mumble");
 	troll->set_spell_mess2(
-		   "The troll says: Your mother was a bitch!");
+		   "The troll says: You fight like a stunted goblin!");
 	troll->set_chance(20);
 	move_object(troll, this_object());
 	money = clone_object("obj/money");
