@@ -1,0 +1,341 @@
+========================================================================
+DRAGONLANCE AREA TEST PLAN
+========================================================================
+
+OVERVIEW
+--------
+48 rooms across 5 subdirectories, 4 quests, entry from room/plane10 west.
+All tests should be run as both a normal player and a wizard.
+
+========================================================================
+1. ROOM CONNECTIVITY VERIFICATION
+========================================================================
+
+Walk every exit and verify it goes to the correct room and that the
+return exit brings you back. Use "goto <room>" as wizard to speed up.
+
+ROADS (5 rooms):
+  [ ] plane10 -> west -> roads/road1
+  [ ] roads/road1 -> east -> plane10
+  [ ] roads/road1 -> west -> roads/road2
+  [ ] roads/road2 -> east -> roads/road1
+  [ ] roads/road2 -> west -> solace/gate
+  [ ] roads/road2 -> south -> roads/road_south
+  [ ] roads/road_south -> north -> roads/road2
+  [ ] roads/road_south -> south -> xak_tsaroth/road1
+  [ ] roads/road1 -> north -> roads/pax_road1
+  [ ] roads/pax_road1 -> south -> roads/road1
+  [ ] roads/pax_road1 -> north -> roads/pax_road2
+  [ ] roads/pax_road2 -> south -> roads/pax_road1
+  [ ] roads/pax_road2 -> north -> pax_tharkas/road3
+
+SOLACE (10 rooms):
+  [ ] solace/gate -> east -> roads/road2
+  [ ] solace/gate -> up -> solace/bridge
+  [ ] solace/bridge -> down -> solace/gate
+  [ ] solace/bridge -> north -> solace/square
+  [ ] solace/square -> south -> solace/bridge
+  [ ] solace/square -> north -> solace/inn
+  [ ] solace/square -> west -> solace/shop
+  [ ] solace/square -> east -> solace/house
+  [ ] solace/square -> southwest -> solace/tree1
+  [ ] solace/square -> "enter temple" -> solace/temple
+  [ ] solace/inn -> south -> solace/square
+  [ ] solace/inn -> up -> solace/inn_upper
+  [ ] solace/inn_upper -> down -> solace/inn
+  [ ] solace/shop -> east -> solace/square
+  [ ] solace/house -> west -> solace/square
+  [ ] solace/tree1 -> northeast -> solace/square
+  [ ] solace/tree1 -> west -> solace/tree2
+  [ ] solace/tree2 -> east -> solace/tree1
+  [ ] solace/temple -> out -> solace/square
+
+XAK TSAROTH (12 rooms):
+  [ ] xak_tsaroth/road1 -> north -> roads/road_south
+  [ ] xak_tsaroth/road1 -> south -> xak_tsaroth/road2
+  [ ] xak_tsaroth/road2 -> north -> xak_tsaroth/road1
+  [ ] xak_tsaroth/road2 -> south -> xak_tsaroth/gate
+  [ ] xak_tsaroth/gate -> north -> xak_tsaroth/road2
+  [ ] xak_tsaroth/gate -> south -> xak_tsaroth/plaza
+  [ ] xak_tsaroth/plaza -> north -> xak_tsaroth/gate
+  [ ] xak_tsaroth/plaza -> west -> xak_tsaroth/temple
+  [ ] xak_tsaroth/plaza -> south -> xak_tsaroth/well
+  [ ] xak_tsaroth/plaza -> east -> xak_tsaroth/hall
+  [ ] xak_tsaroth/temple -> east -> xak_tsaroth/plaza
+  [ ] xak_tsaroth/hall -> west -> xak_tsaroth/plaza
+  [ ] xak_tsaroth/well -> north -> xak_tsaroth/plaza
+  [ ] xak_tsaroth/well -> (use rope) -> xak_tsaroth/under1
+  [ ] xak_tsaroth/under1 -> up -> xak_tsaroth/well
+  [ ] xak_tsaroth/under1 -> south -> xak_tsaroth/under2
+  [ ] xak_tsaroth/under1 -> east -> xak_tsaroth/collapse
+  [ ] xak_tsaroth/under2 -> north -> xak_tsaroth/under1
+  [ ] xak_tsaroth/under2 -> south -> xak_tsaroth/dragon_lair
+  [ ] xak_tsaroth/dragon_lair -> north -> xak_tsaroth/under2
+  [ ] xak_tsaroth/collapse -> west -> xak_tsaroth/under1
+  [ ] xak_tsaroth/ruins -> south -> xak_tsaroth/plaza (ONE_EXIT)
+
+PAX THARKAS (11 rooms):
+  [ ] pax_tharkas/road3 -> south -> roads/pax_road2
+  [ ] pax_tharkas/road3 -> north -> pax_tharkas/gate
+  [ ] pax_tharkas/gate -> south -> pax_tharkas/road3
+  [ ] pax_tharkas/gate -> north -> pax_tharkas/court
+  [ ] pax_tharkas/court -> south -> pax_tharkas/gate
+  [ ] pax_tharkas/court -> north -> pax_tharkas/hall
+  [ ] pax_tharkas/court -> west -> pax_tharkas/barracks
+  [ ] pax_tharkas/court -> east -> pax_tharkas/armory
+  [ ] pax_tharkas/court -> down -> pax_tharkas/prison
+  [ ] pax_tharkas/barracks -> east -> pax_tharkas/court
+  [ ] pax_tharkas/hall -> south -> pax_tharkas/court
+  [ ] pax_tharkas/hall -> up -> pax_tharkas/upper
+  [ ] pax_tharkas/armory -> west -> pax_tharkas/court
+  [ ] pax_tharkas/prison -> up -> pax_tharkas/court
+  [ ] pax_tharkas/upper -> down -> pax_tharkas/hall
+  [ ] pax_tharkas/upper -> west -> pax_tharkas/tower_w
+  [ ] pax_tharkas/upper -> east -> pax_tharkas/tower_e
+  [ ] pax_tharkas/tower_w -> east -> pax_tharkas/upper
+  [ ] pax_tharkas/tower_e -> west -> pax_tharkas/upper
+  [ ] pax_tharkas/tower_e -> up -> pax_tharkas/summit
+  [ ] pax_tharkas/tower_e -> "enter portal" -> temple/entry (level 16+)
+  [ ] pax_tharkas/summit -> down -> pax_tharkas/tower_e
+
+TEMPLE (10 rooms):
+  [ ] temple/entry -> north -> temple/nave
+  [ ] temple/nave -> south -> temple/entry
+  [ ] temple/nave -> west -> temple/west
+  [ ] temple/nave -> east -> temple/east
+  [ ] temple/nave -> north -> temple/altar
+  [ ] temple/nave -> down -> temple/crypt
+  [ ] temple/nave -> up -> temple/gallery
+  [ ] temple/west -> east -> temple/nave
+  [ ] temple/east -> west -> temple/nave
+  [ ] temple/altar -> south -> temple/nave
+  [ ] temple/altar -> north -> BLOCKED (until gem used)
+  [ ] temple/altar -> north -> temple/sanctum (after gem used)
+  [ ] temple/crypt -> up -> temple/nave
+  [ ] temple/gallery -> down -> temple/nave
+  [ ] temple/sanctum -> south -> temple/altar
+  [ ] temple/sanctum -> north -> temple/corridor
+  [ ] temple/corridor -> south -> temple/sanctum
+  [ ] temple/corridor -> north -> temple/throne
+  [ ] temple/throne -> south -> temple/corridor
+
+========================================================================
+2. MONSTER STAT VERIFICATION
+========================================================================
+
+Use "examine <monster>" and wizard eval to check stats.
+
+ROADS:
+  [ ] Goblin scout (road1): level 2, HP 40, WC 4, AC 0, aggressive
+  [ ] Goblin scout (road2): level 2, HP 40, WC 4, AC 0, aggressive
+  [ ] Hobgoblin raider (road_south): level 4, HP 60, WC 6, AC 1, aggressive
+
+XAK TSAROTH:
+  [ ] Draconian soldier (road2, gate, plaza): level 6, HP 88, WC 8, AC 1
+  [ ] Draconian kapak (under1, under2): level 8, HP 106, WC 10, AC 2
+  [ ] Bupu gully dwarf (hall): level 3, HP 50, NON-aggressive
+  [ ] Khisanth (dragon_lair, quest-spawned): level 10, HP 150, WC 14, AC 3
+      - Spell: acid breath, 20% chance, dam 15
+
+PAX THARKAS:
+  [ ] Dragonarmy soldier (gate x2, court): level 10, HP 122, WC 12, AC 2
+  [ ] Dragonarmy captain (barracks): level 12, HP 138, WC 14, AC 3
+  [ ] Dark cleric (hall): level 11, HP 130, WC 10, AC 2
+      - Spell: dark bolt, 30% chance, dam 18
+  [ ] Armory guard (armory): level 10, HP 122, WC 12, AC 2
+  [ ] Verminaard (summit, quest-spawned): level 15, HP 200, WC 18, AC 4
+      - Spell: fire, 25% chance, dam 25
+
+TEMPLE:
+  [ ] Shadow priest (west): level 15, HP 162, WC 14, AC 3
+      - Spell: shadow bolt, 30% chance, dam 20
+  [ ] Death knight (east): level 17, HP 178, WC 18, AC 4
+  [ ] Skeletal champion (crypt): level 16, HP 170, WC 16, AC 4
+  [ ] Dark guardian (sanctum): level 18, HP 186, WC 18, AC 4
+      - Spell: dark flame, 25% chance, dam 22
+  [ ] Avatar of Takhisis (throne, quest-spawned): level 20, HP 250, WC 22, AC 5
+      - Spell: dragonfire, 35% chance, dam 30
+
+QUEST NPCs (non-aggressive):
+  [ ] Goldmoon (solace/temple): level 5, HP 82, al 300
+  [ ] Tika Waylan (solace/inn_upper): level 3, HP 50, al 100
+  [ ] Riverwind (xak_tsaroth/temple): level 8, HP 106, al 200
+  [ ] Elistan (pax_tharkas/prison): level 10, HP 122, al 400
+  [ ] Laurana (pax_tharkas/tower_w): level 12, HP 138, al 300
+  [ ] Fizban (temple/entry): level 1, HP 50, al 500
+
+========================================================================
+3. QUEST FLOW TESTS
+========================================================================
+
+QUEST 1: The Blue Crystal Staff (Levels 1-5)
+Quest string: "blue_crystal_staff"
+
+  [ ] Go to solace/temple, say "hello" to Goldmoon
+  [ ] Verify prayer token received in inventory
+  [ ] Go to solace/tree2, "use token"
+  [ ] Verify corrupted treant spawns (level 5)
+  [ ] Kill treant, verify crystal fragment drops
+  [ ] Pick up crystal fragment
+  [ ] Return to solace/temple, say "crystal" to Goldmoon
+  [ ] Verify: 600 XP awarded, Staff of Healing received (weapon class 5)
+  [ ] Verify quest flag: query_quests("blue_crystal_staff") returns true
+  [ ] Say "hello" again: verify "already completed" message
+
+QUEST 2: The Disks of Mishakal (Levels 5-10)
+Quest string: "disks_of_mishakal"
+
+  [ ] Go to xak_tsaroth/temple, say "hello" to Riverwind
+  [ ] Verify rope received in inventory
+  [ ] Go to xak_tsaroth/well, "use rope"
+  [ ] Verify descent to xak_tsaroth/under1
+  [ ] Navigate south to dragon_lair
+  [ ] Verify Khisanth spawns (level 10, acid breath spell)
+  [ ] Kill Khisanth, verify Disks of Mishakal drop
+  [ ] Pick up disks
+  [ ] Return to xak_tsaroth/temple, say "disks" to Riverwind
+  [ ] Verify: 1500 XP, Dragonscale Shield (armour, type shield, AC 2)
+  [ ] Verify quest flag: query_quests("disks_of_mishakal") returns true
+
+QUEST 3: The Liberation of Pax Tharkas (Levels 10-15)
+Quest string: "liberation_pax_tharkas"
+
+  [ ] Go to pax_tharkas/prison, say "hello" to Elistan
+  [ ] Quest starts (stage 1)
+  [ ] Go to pax_tharkas/armory, pick up gate key
+  [ ] Go to pax_tharkas/tower_w, "use key"
+  [ ] Verify cell opens, Laurana talks (stage 3)
+  [ ] Go up to pax_tharkas/tower_e, then up to summit
+  [ ] Verify Verminaard spawns (level 15, fire spell)
+  [ ] Kill Verminaard (stage 5)
+  [ ] Return to pax_tharkas/prison, say "hello" to Elistan
+  [ ] Verify: 3000 XP, Wyrmslayer (weapon class 14)
+  [ ] Verify quest flag: query_quests("liberation_pax_tharkas") returns true
+
+QUEST 4: The Defeat of Takhisis (Level 16+)
+Quest string: "defeat_takhisis"
+
+  [ ] Go to pax_tharkas/tower_e, "enter portal"
+  [ ] Below level 16: verify rejection message
+  [ ] At level 16+: verify transport to temple/entry
+  [ ] Say "hello" to Fizban
+  [ ] Verify Gem of Paladine received
+  [ ] Go to temple/altar, "use gem"
+  [ ] Verify dark barrier destroyed
+  [ ] Go north to temple/sanctum, then north to corridor, north to throne
+  [ ] Verify Avatar of Takhisis spawns (level 20, dragonfire spell)
+  [ ] Kill Avatar (stage 4)
+  [ ] Return to temple/entry, say "hello" to Fizban
+  [ ] Verify: 6000 XP, Dragonlance (weapon class 20), Medallion of Faith (AC 3)
+  [ ] Verify quest flag: query_quests("defeat_takhisis") returns true
+
+========================================================================
+4. QUEST EDGE CASES
+========================================================================
+
+TIMEOUT (30-minute expiry):
+  [ ] Start a quest, wait 30+ minutes, verify quest resets
+  [ ] Another player can now start the same quest
+
+CONCURRENT PLAYERS:
+  [ ] Player A starts Quest 1
+  [ ] Player B tries to start Quest 1 -> verify "someone else" message
+  [ ] Player A completes -> Player B can now start
+
+REPEAT COMPLETION:
+  [ ] Complete a quest, talk to the giver again
+  [ ] Verify "already completed" response, no duplicate rewards
+
+QUEST ITEMS:
+  [ ] Verify prayer token is consumed when used at tree2
+  [ ] Verify rope is consumed when used at well
+  [ ] Verify gate key is consumed when used at tower_w
+  [ ] Verify Gem of Paladine is consumed when used at altar
+  [ ] Verify crystal fragment, disks are consumed on quest completion
+
+BOSS RESPAWN:
+  [ ] Verify bosses only spawn for quest players, not random visitors
+  [ ] Verify bosses don't respawn on room reset (quest-triggered only)
+
+========================================================================
+5. REWARD ITEM VERIFICATION
+========================================================================
+
+  [ ] Staff of Healing: weapon, name "staff", class 5, value 200, weight 3
+  [ ] Dragonscale Shield: armour, type "shield", AC 2, value 500, weight 4
+  [ ] Wyrmslayer: weapon, name "wyrmslayer", class 14, value 1200, weight 5
+  [ ] Dragonlance: weapon, name "dragonlance", class 20, value 5000, weight 6
+  [ ] Medallion of Faith: armour, type "amulet", AC 3, value 2000, weight 1
+
+========================================================================
+6. DARK ROOM CHECKS
+========================================================================
+
+  [ ] xak_tsaroth/under1: set_light(0), requires light source
+  [ ] xak_tsaroth/under2: set_light(0)
+  [ ] xak_tsaroth/collapse: set_light(0)
+  [ ] xak_tsaroth/dragon_lair: set_light(0)
+  [ ] pax_tharkas/prison: set_light(0)
+  [ ] temple/west: set_light(0)
+  [ ] temple/east: set_light(0)
+  [ ] temple/sanctum: set_light(0)
+  [ ] temple/corridor: set_light(0)
+
+Verify "Dark room" message when entering without a torch/light source.
+Verify full description shows with a torch.
+
+========================================================================
+7. INN OF THE LAST HOME
+========================================================================
+
+  [ ] Buy menu displays correctly on room entry
+  [ ] "buy 1" - Otik's Spiced Potatoes (15gp, heals 4)
+  [ ] "buy 2" - Roast Venison (40gp, heals 8)
+  [ ] "buy 3" - Feast of the Companions (80gp, heals 12)
+  [ ] "buy 4" - Otik's Ale (3gp, alcohol)
+  [ ] Level restrictions work (high level refused cheap food)
+  [ ] "sold out" message when stock depleted
+  [ ] Stock replenishes on reset
+
+========================================================================
+8. LEVEL GATE VERIFICATION
+========================================================================
+
+  [ ] "enter portal" at pax_tharkas/tower_e below level 16: rejected
+  [ ] "enter portal" at level 16+: transported to temple/entry
+
+========================================================================
+9. QUEST REGISTRATION
+========================================================================
+
+  [ ] Visit room/quest_room, verify all 4 quests are registered:
+      - blue_crystal_staff
+      - disks_of_mishakal
+      - liberation_pax_tharkas
+      - defeat_takhisis
+  [ ] Each quest responds to "hint" with appropriate hint text
+
+========================================================================
+10. INIT_FILE REGISTRATION
+========================================================================
+
+  [ ] All 48 room files listed in room/init_file
+  [ ] Server loads without errors after reboot
+  [ ] All rooms accessible after reboot
+
+========================================================================
+11. NPC CHAT/BEHAVIOR
+========================================================================
+
+  [ ] Goldmoon has idle chat (prayers, old gods)
+  [ ] Tika has idle chat (spiced potatoes, old gods, temple hint)
+  [ ] Riverwind has idle chat (draconians, wary)
+  [ ] Bupu has idle chat (counting, lizard-mens, dragon hint)
+  [ ] Elistan has idle chat (prayers, Paladine)
+  [ ] Laurana has idle chat (Verminaard, east tower)
+  [ ] Fizban has idle chat (confused, chicken, fireball)
+  [ ] All combat monsters have attack chat
+
+========================================================================
+END OF TEST PLAN
+========================================================================
