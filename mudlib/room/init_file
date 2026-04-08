@@ -309,6 +309,7 @@ room/dragonlance/solace/square.c
 room/dragonlance/solace/inn.c
 room/dragonlance/solace/inn_upper.c
 room/dragonlance/solace/shop.c
+room/dragonlance/solace/station.c
 room/dragonlance/solace/house.c
 room/dragonlance/solace/tree1.c
 room/dragonlance/solace/tree2.c

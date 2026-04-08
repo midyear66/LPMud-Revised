@@ -36,109 +36,109 @@ void reset(int arg) {
 	init_shop();
 
 	/* Fixed weapons -- always available */
-	add_stock_weapon("club",
+	add_stock_weapon("club", "wooden club",
 	    "A wooden club",
 	    "A heavy wooden club, simple but effective.\n",
 	    3, 10, 2);
-	add_stock_weapon("sword",
+	add_stock_weapon("sword", "short sword",
 	    "A short sword",
 	    "A short iron sword with a leather-wrapped grip.\n",
 	    5, 40, 3);
-	add_stock_weapon("axe",
+	add_stock_weapon("axe", "hand axe",
 	    "A hand axe",
 	    "A small hand axe with a keen iron head.\n",
 	    5, 35, 3);
-	add_stock_weapon("spear",
+	add_stock_weapon("spear", 0,
 	    "A sturdy spear",
 	    "A sturdy wooden spear tipped with forged iron.\n",
 	    6, 50, 4);
-	add_stock_weapon("longsword",
+	add_stock_weapon("longsword", "long sword",
 	    "A longsword",
 	    "A well-forged iron longsword, balanced for combat.\n",
 	    7, 80, 4);
 
 	/* Fixed armor -- always available */
-	add_stock_armour("cap",
+	add_stock_armour("cap", "leather cap",
 	    "A leather cap",
 	    "A hardened leather cap that protects the head.\n",
 	    "helmet", 1, 20, 1);
-	add_stock_armour("leather",
+	add_stock_armour("leather", "leather armor",
 	    "Leather armor",
 	    "A suit of boiled leather armor, light and flexible.\n",
 	    "armour", 1, 40, 2);
-	add_stock_armour("shield",
+	add_stock_armour("shield", "wooden shield",
 	    "A wooden shield",
 	    "A round wooden shield reinforced with an iron boss.\n",
 	    "shield", 1, 30, 2);
-	add_stock_armour("chain",
+	add_stock_armour("chain", "chain shirt",
 	    "A chain shirt",
 	    "A shirt of interlocking chain links, offering good protection.\n",
 	    "armour", 2, 80, 3);
-	add_stock_armour("helm",
+	add_stock_armour("helm", "iron helm",
 	    "An iron helm",
 	    "A plain but sturdy iron helmet.\n",
 	    "helmet", 1, 35, 2);
 
 	/* Random weapons pool */
-	add_random_weapon("dagger",
+	add_random_weapon("dagger", 0,
 	    "A dagger",
 	    "A small, sharp dagger suitable for close combat.\n",
 	    3, 15, 1);
-	add_random_weapon("mace",
+	add_random_weapon("mace", "heavy mace",
 	    "A heavy mace",
 	    "A flanged iron mace that delivers crushing blows.\n",
 	    5, 45, 3);
-	add_random_weapon("battleaxe",
+	add_random_weapon("battleaxe", "battle axe",
 	    "A battle axe",
 	    "A large battle axe with a double-bladed iron head.\n",
 	    7, 90, 4);
-	add_random_weapon("flail",
+	add_random_weapon("flail", 0,
 	    "A flail",
 	    "A spiked iron ball on a chain, attached to a wooden handle.\n",
 	    6, 60, 3);
-	add_random_weapon("quarterstaff",
+	add_random_weapon("quarterstaff", 0,
 	    "A quarterstaff",
 	    "A hardwood quarterstaff, iron-shod at both ends.\n",
 	    4, 25, 3);
-	add_random_weapon("broadsword",
+	add_random_weapon("broadsword", "broad sword",
 	    "A broadsword",
 	    "A heavy broadsword with a wide blade for slashing.\n",
 	    8, 120, 4);
-	add_random_weapon("warhammer",
+	add_random_weapon("warhammer", "war hammer",
 	    "A warhammer",
 	    "A sturdy warhammer with a steel head.\n",
 	    7, 85, 4);
-	add_random_weapon("morningstar",
+	add_random_weapon("morningstar", "morning star",
 	    "A morning star",
 	    "A spiked steel ball on a short haft, a brutal weapon.\n",
 	    8, 110, 4);
 
 	/* Random armor pool */
-	add_random_armour("gloves",
+	add_random_armour("gloves", "leather gloves",
 	    "Leather gloves",
 	    "A pair of sturdy leather gloves reinforced at the knuckles.\n",
 	    "glove", 1, 15, 1);
-	add_random_armour("studded",
+	add_random_armour("studded", "studded leather",
 	    "Studded leather armor",
 	    "Leather armor reinforced with metal studs.\n",
 	    "armour", 1, 55, 2);
-	add_random_armour("buckler",
+	add_random_armour("buckler", "small shield",
 	    "A small shield",
 	    "A small round buckler for deflecting blows.\n",
 	    "shield", 1, 25, 2);
-	add_random_armour("scale",
+	add_random_armour("scale", "scale armor",
 	    "Scale armor",
 	    "Armor made of overlapping metal scales riveted to leather.\n",
 	    "armour", 2, 100, 3);
-	add_random_armour("steelshield",
+	add_random_armour("steelshield", "steel shield",
 	    "A steel shield",
 	    "A round steel shield bearing the mark of Solace.\n",
 	    "shield", 2, 90, 3);
-	add_random_armour("halfhelm",
+	add_random_armour("halfhelm", "half helm",
 	    "A half helm",
 	    "An open-faced steel helm protecting the top and sides of the head.\n",
 	    "helmet", 1, 30, 2);
-	add_random_armour("ringmail",
+	add_random_armour("ringmail", "ring mail",
 	    "Ring mail armor",
 	    "Armor made of metal rings sewn onto a leather backing.\n",
 	    "ring", 1, 50, 2);

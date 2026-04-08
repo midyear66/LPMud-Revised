@@ -4,7 +4,7 @@
  * Cycles between 4 underground stations on a 60-second loop.
  * 10 seconds dwell at each station, 5 seconds travel between.
  *
- * Route: Village -> Eastroad Inn -> Plains Crossing -> Orc Valley -> repeat
+ * Route: Village -> Eastroad Inn -> Plains Crossing -> Orc Valley -> Solace -> repeat
  */
 
 inherit "room/room";
@@ -36,14 +36,16 @@ void reset(int arg) {
 	"room/station",
 	"room/station_east",
 	"room/station_plains",
-	"room/station_orc"
+	"room/station_orc",
+	"room/dragonlance/solace/station"
     });
 
     station_names = ({
 	"Village",
 	"Eastroad Inn",
 	"Plains Crossing",
-	"Orc Valley"
+	"Orc Valley",
+	"Solace"
     });
 
     set_light(1);

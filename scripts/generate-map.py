@@ -47,6 +47,7 @@ PALETTE = {
     "orcs":         ((175, 65, 65),   (130, 35, 35),    (255, 220, 220)),
     "east_road":    ((195, 175, 140), (150, 130, 95),   (50, 40, 20)),
     "south_forest": ((25, 80, 25),    (10, 50, 10),     (190, 230, 190)),
+    "dragonlance":  ((185, 100, 100), (140, 55, 55),    (255, 225, 225)),
     "special":      ((180, 180, 190), (130, 130, 140),  (30, 30, 40)),
     "elevator":     ((165, 165, 210), (120, 120, 165),  (30, 30, 60)),
 }
@@ -73,6 +74,7 @@ REGION_RULES = [
     (r"^mine/",         "mines"),
     (r"^maze1/",        "underground"),
     (r"^sub/",          "underground"),
+    (r"^dragonlance/",  "dragonlance"),
     (r"^death/",        "special"),
     # Top-level name patterns
     (r"^mount_",        "mountains"),
@@ -568,6 +570,7 @@ REGION_BOXES = {
     "south_forest": (1500,  3350, 1700, 650),
     "shore":        (1500,  4100, 1700, 600),
     "island":       (1500,  4800, 1700, 450),
+    "dragonlance":  (3400,  3350, 2000, 1500),
 }
 
 MARGIN = 120
@@ -1015,6 +1018,7 @@ REGION_DISPLAY_NAMES = {
     "south_forest": "DIMLY LIT FOREST",
     "shore":        "CRESCENT LAKE",
     "island":       "ISLE OF THE MAGI",
+    "dragonlance":  "DRAGONLANCE",
     "special":      "SPECIAL ROOMS",
     "elevator":     "ELEVATOR",
 }

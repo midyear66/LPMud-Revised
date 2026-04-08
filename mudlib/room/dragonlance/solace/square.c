@@ -15,7 +15,7 @@ void reset(int arg) {
 "connecting shops, homes, and the famous Inn of the Last Home.\n" +
 "Lanterns hang from the branches, casting a warm golden glow. The\n" +
 "sounds of laughter and clinking mugs drift from the inn to the\n" +
-"north. A small temple can be entered to the southeast.\n";
+"north. You can 'enter temple' to visit a small shrine nearby.\n";
 	dest_dir = ({
 	    "room/dragonlance/solace/bridge", "south",
 	    "room/dragonlance/solace/inn", "north",

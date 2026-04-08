@@ -98,10 +98,10 @@ room/wild1.c: "Wilderness" -> east:room/hump, west:room/forest1
 DEEP FOREST
 ==============================================================================
 
-room/deep_forest1.c: "Deep forest" -> east:room/plane12
+room/deep_forest1.c: "Deep forest" -> east:room/plane12, north:room/forest12
 room/forest10.c: "Deep forest" -> west:room/forest9, east:room/forest7
 room/forest11.c: "Deep forest" -> east:room/forest9, west:room/forest12
-room/forest12.c: "Deep forest" -> south:room/south/sforst1, east:room/forest11
+room/forest12.c: "Deep forest" -> south:room/south/sforst1, east:room/forest11, west:room/deep_forest1
 room/forest3.c: "Deep forest" -> north:room/slope, south:room/forest4
 room/forest4.c: "Deep forest" -> north:room/forest3, west:room/forest5, east:room/forest6, south:room/forest7
 room/forest5.c: "Deep forest" -> west:room/forest8, east:room/forest4
@@ -115,7 +115,7 @@ PLAINS
 ==============================================================================
 
 room/plane1.c: "A large open plain" -> south:room/clearing, north:room/plane2
-room/plane10.c: "A large open plain" -> north:room/plane12, east:room/plane6, south:room/plane7
+room/plane10.c: "A large open plain" -> north:room/plane12, east:room/plane6, south:room/plane7, west:room/dragonlance/roads/road1
 room/plane11.c: "A large open plain" -> south:room/plane6, north:room/mount_pass, east:room/plane13, west:room/plane12, down:room/station_plains
 room/plane12.c: "A large open plain" -> west:room/deep_forest1, east:room/plane11, south:room/plane10
 room/plane13.c: "A large open plain" -> west:room/plane11, south:room/plane8
@@ -355,4 +355,4 @@ ROOM COUNT SUMMARY
   ISLE OF THE MAGI: 19 rooms
   PEACE'S CASTLE: 1 rooms
 
-  Total: 243 rooms
+  Total: 291 rooms

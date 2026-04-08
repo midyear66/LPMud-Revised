@@ -47,28 +47,28 @@ void init_shop() {
     shop_initialized = 1;
 }
 
-void add_stock_weapon(string name, string sh, string lo,
+void add_stock_weapon(string name, string alias, string sh, string lo,
 		      int class, int value, int weight) {
     if (!shop_initialized) init_shop();
-    fixed_weapons += ({ ({ name, sh, lo, class, value, weight }) });
+    fixed_weapons += ({ ({ name, alias, sh, lo, class, value, weight }) });
 }
 
-void add_stock_armour(string name, string sh, string lo,
+void add_stock_armour(string name, string alias, string sh, string lo,
 		      string type, int ac, int value, int weight) {
     if (!shop_initialized) init_shop();
-    fixed_armours += ({ ({ name, sh, lo, type, ac, value, weight }) });
+    fixed_armours += ({ ({ name, alias, sh, lo, type, ac, value, weight }) });
 }
 
-void add_random_weapon(string name, string sh, string lo,
+void add_random_weapon(string name, string alias, string sh, string lo,
 		       int class, int value, int weight) {
     if (!shop_initialized) init_shop();
-    random_weapons += ({ ({ name, sh, lo, class, value, weight }) });
+    random_weapons += ({ ({ name, alias, sh, lo, class, value, weight }) });
 }
 
-void add_random_armour(string name, string sh, string lo,
+void add_random_armour(string name, string alias, string sh, string lo,
 		       string type, int ac, int value, int weight) {
     if (!shop_initialized) init_shop();
-    random_armours += ({ ({ name, sh, lo, type, ac, value, weight }) });
+    random_armours += ({ ({ name, alias, sh, lo, type, ac, value, weight }) });
 }
 
 /* Create a weapon from a definition array and move it to the shop.
@@ -78,11 +78,13 @@ object spawn_weapon(mixed *def) {
     object w;
     w = clone_object("obj/weapon");
     w->set_name(def[0]);
-    w->set_long(def[2]);
-    w->set_class(def[3]);
-    w->set_value(def[4]);
-    w->set_weight(def[5]);
-    w->set_info(def[1]);     /* store display name in info */
+    if (def[1])
+	w->set_alias(def[1]);
+    w->set_long(def[3]);
+    w->set_class(def[4]);
+    w->set_value(def[5]);
+    w->set_weight(def[6]);
+    w->set_info(def[2]);     /* store display name in info */
     w->set_short(0);         /* hide from room inventory */
     move_object(w, this_object());
     return w;
@@ -94,12 +96,14 @@ object spawn_armour(mixed *def) {
     object a;
     a = clone_object("obj/armour");
     a->set_id(def[0]);
-    a->set_long(def[2]);
-    a->set_type(def[3]);
-    a->set_ac(def[4]);
-    a->set_value(def[5]);
-    a->set_weight(def[6]);
-    a->set_info(def[1]);     /* store display name in info */
+    if (def[1])
+	a->set_alias(def[1]);
+    a->set_long(def[3]);
+    a->set_type(def[4]);
+    a->set_ac(def[5]);
+    a->set_value(def[6]);
+    a->set_weight(def[7]);
+    a->set_info(def[2]);     /* store display name in info */
     a->set_short(0);         /* hide from room inventory */
     move_object(a, this_object());
     return a;

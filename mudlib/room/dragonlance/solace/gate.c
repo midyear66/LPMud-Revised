@@ -15,10 +15,12 @@ void reset(int arg) {
 "staircase spirals up around the nearest trunk, leading to a rope\n" +
 "bridge that connects the tree-top buildings. A sign reads:\n" +
 "'Welcome to Solace - Home of the Inn of the Last Home'.\n" +
-"The forest road lies to the east.\n";
+"The forest road lies to the east. Stone stairs lead down to an\n" +
+"underground rail station.\n";
 	dest_dir = ({
 	    "room/dragonlance/roads/road2", "east",
-	    "room/dragonlance/solace/bridge", "up"
+	    "room/dragonlance/solace/bridge", "up",
+	    "room/dragonlance/solace/station", "down"
 	});
 	items = ({
 	    "trees", "Enormous vallenwood trees, the largest you have ever seen",

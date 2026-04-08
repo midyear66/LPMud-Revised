@@ -6,8 +6,8 @@
 string schedule;
 
 void reset(int arg) {
-    schedule = "UNDERGROUND RAIL: Village - Eastroad Inn - Plains Crossing - Orc Valley\n" +
-	"Full circuit: approximately one minute. Cart pauses 10 seconds at each stop.\n" +
+    schedule = "UNDERGROUND RAIL: Village - Eastroad Inn - Plains Crossing - Orc Valley - Solace\n" +
+	"Full circuit: approximately 75 seconds. Cart pauses 10 seconds at each stop.\n" +
 	"Commands: 'board' to enter the cart, 'exit' to leave at a station.\n";
 }
 

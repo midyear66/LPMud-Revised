@@ -38,101 +38,101 @@ void reset(int arg) {
 	init_shop();
 
 	/* Fixed weapons -- always available */
-	add_stock_weapon("knife",
+	add_stock_weapon("knife", "small knife",
 	    "A small knife",
 	    "A small iron knife, useful for a beginner.\n",
 	    3, 8, 1);
-	add_stock_weapon("sword",
+	add_stock_weapon("sword", "short sword",
 	    "A short sword",
 	    "A short iron sword with a simple crossguard.\n",
 	    5, 40, 3);
-	add_stock_weapon("longsword",
+	add_stock_weapon("longsword", "long sword",
 	    "A long sword",
 	    "A reliable iron longsword, good for most situations.\n",
 	    7, 80, 4);
-	add_stock_weapon("broadsword",
+	add_stock_weapon("broadsword", "broad sword",
 	    "A broad sword",
 	    "A broad-bladed sword designed for heavy cutting strokes.\n",
 	    8, 120, 4);
 
 	/* Fixed armor -- always available */
-	add_stock_armour("hat",
+	add_stock_armour("hat", "leather hat",
 	    "A leather hat",
 	    "A hardened leather hat offering basic head protection.\n",
 	    "helmet", 1, 15, 1);
-	add_stock_armour("vest",
+	add_stock_armour("vest", "leather vest",
 	    "A leather vest",
 	    "A vest of thick leather, offering some protection.\n",
 	    "armour", 1, 35, 2);
-	add_stock_armour("shield",
+	add_stock_armour("shield", "small shield",
 	    "A small shield",
 	    "A small wooden shield with an iron rim.\n",
 	    "shield", 1, 25, 2);
-	add_stock_armour("chainmail",
+	add_stock_armour("chainmail", "chain mail",
 	    "Chain mail armor",
 	    "A coat of interlocking iron rings, solid protection.\n",
 	    "armour", 2, 90, 3);
 
 	/* Random weapons pool */
-	add_random_weapon("dagger",
+	add_random_weapon("dagger", 0,
 	    "A dagger",
 	    "A thin-bladed dagger for close fighting.\n",
 	    3, 12, 1);
-	add_random_weapon("club",
+	add_random_weapon("club", 0,
 	    "A club",
 	    "A simple wooden club, heavy and blunt.\n",
 	    3, 10, 2);
-	add_random_weapon("mace",
+	add_random_weapon("mace", 0,
 	    "A mace",
 	    "An iron mace with a flanged head.\n",
 	    5, 45, 3);
-	add_random_weapon("battleaxe",
+	add_random_weapon("battleaxe", "battle axe",
 	    "A battle axe",
 	    "A heavy battle axe with a broad iron head.\n",
 	    7, 90, 4);
-	add_random_weapon("flail",
+	add_random_weapon("flail", 0,
 	    "A flail",
 	    "A spiked ball on a chain, attached to a handle.\n",
 	    6, 60, 3);
-	add_random_weapon("greatsword",
+	add_random_weapon("greatsword", "two-handed sword",
 	    "A two-handed sword",
 	    "An enormous two-handed sword requiring great strength.\n",
 	    9, 150, 5);
-	add_random_weapon("pike",
+	add_random_weapon("pike", 0,
 	    "A pike",
 	    "A long pike with a sharp steel head.\n",
 	    6, 55, 4);
-	add_random_weapon("hammer",
+	add_random_weapon("hammer", 0,
 	    "A hammer",
 	    "A heavy iron hammer, good for bashing.\n",
 	    4, 30, 3);
 
 	/* Random armor pool */
-	add_random_armour("clothcap",
+	add_random_armour("clothcap", "cloth cap",
 	    "A cloth cap",
 	    "A padded cloth cap, better than nothing.\n",
 	    "helmet", 1, 10, 1);
-	add_random_armour("ironshield",
+	add_random_armour("ironshield", "iron shield",
 	    "An iron shield",
 	    "A sturdy iron shield with a leather grip.\n",
 	    "shield", 2, 85, 3);
-	add_random_armour("padded",
+	add_random_armour("padded", "padded armor",
 	    "Padded armor",
 	    "Thick quilted armor offering modest protection.\n",
 	    "armour", 1, 45, 2);
-	add_random_armour("ringmail",
+	add_random_armour("ringmail", "ring mail",
 	    "Ring mail armor",
 	    "Armor of metal rings sewn onto leather.\n",
 	    "ring", 1, 50, 2);
-	add_random_armour("steelhelm",
+	add_random_armour("steelhelm", "steel helm",
 	    "A steel helm",
 	    "A polished steel helmet with a nose guard.\n",
 	    "helmet", 1, 40, 2);
-	add_random_armour("gloves",
+	add_random_armour("gloves", "leather gloves",
 	    "Leather gloves",
 	    "Sturdy leather gloves with reinforced palms.\n",
 	    "glove", 1, 15, 1);
-	add_random_armour("scalemail",
+	add_random_armour("scalemail", "scale mail",
 	    "Scale mail armor",
 	    "Armor of overlapping metal scales on leather.\n",
 	    "armour", 2, 100, 3);

@@ -12,8 +12,12 @@ void reset(int arg) {
 	set_light(1);
 	short_desc = "Deep forest";
 	long_desc =
-"In the deep forest. The wood lights up to the east.\n";
-	dest_dir = ({ "room/plane12", "east" });
+"In the deep forest. The wood lights up to the east. A narrow\n" +
+"trail leads north through the trees.\n";
+	dest_dir = ({
+	    "room/plane12", "east",
+	    "room/forest12", "north"
+	});
     }
     if (!traveler || !living(traveler)) {
 	traveler = clone_object("obj/monster");
