@@ -40,6 +40,17 @@
     <div class="stat-label">No backup schedule configured</div>
     {% endif %}
   </div>
+
+  <div class="card card-grid-item">
+    <div class="card-header">Backup Retention</div>
+    {% if retention.enabled %}
+    <div class="stat-value">{{ retention.keep_daily }}d / {{ retention.keep_monthly }}m / {{ retention.keep_yearly }}y</div>
+    <div class="stat-label">Keeping {{ retention.keep_daily }} daily, {{ retention.keep_monthly }} monthly, {{ retention.keep_yearly }} yearly</div>
+    {% else %}
+    <div class="stat-value" style="opacity:0.4">Disabled</div>
+    <div class="stat-label">No automatic pruning</div>
+    {% endif %}
+  </div>
 </div>
 
 <div class="card">
@@ -78,6 +89,55 @@
     </div>
     <div class="form-group">
       <button type="submit" class="btn btn-primary">Set Backup Schedule</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-header">Backup Retention Policy</div>
+  <form method="post" action="{{ url_for('scheduler.set_retention') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="form-inline">
+      <div class="form-group">
+        <label>
+          <input type="checkbox" name="enabled" {% if retention.enabled %}checked{% endif %}>
+          Enable automatic pruning
+        </label>
+      </div>
+    </div>
+    <div class="form-inline" style="margin-top: 0.75rem;">
+      <div class="form-group">
+        <label for="keep_daily">Keep daily</label>
+        <input type="number" id="keep_daily" name="keep_daily" min="0" max="365"
+               value="{{ retention.keep_daily }}" style="width: 80px;">
+      </div>
+      <div class="form-group">
+        <label for="keep_monthly">Keep monthly</label>
+        <input type="number" id="keep_monthly" name="keep_monthly" min="0" max="120"
+               value="{{ retention.keep_monthly }}" style="width: 80px;">
+      </div>
+      <div class="form-group">
+        <label for="keep_yearly">Keep yearly</label>
+        <input type="number" id="keep_yearly" name="keep_yearly" min="0" max="50"
+               value="{{ retention.keep_yearly }}" style="width: 80px;">
+      </div>
+    </div>
+    <div class="form-inline" style="margin-top: 0.75rem;">
+      <div class="form-group">
+        <label>
+          <input type="checkbox" name="prune_manual" {% if retention.prune_manual %}checked{% endif %}>
+          Include manual backups
+        </label>
+      </div>
+      <div class="form-group">
+        <label>
+          <input type="checkbox" name="prune_imported" {% if retention.prune_imported %}checked{% endif %}>
+          Include imported backups
+        </label>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top: 0.75rem;">
+      <button type="submit" class="btn btn-primary">Save Retention Policy</button>
     </div>
   </form>
 </div>

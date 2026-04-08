@@ -15,6 +15,7 @@ from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.triggers.cron import CronTrigger
 
 from auth import login_required
+from retention import load_retention_settings, save_retention_settings, prune_backups
 
 scheduler_bp = Blueprint("scheduler", __name__, url_prefix="/scheduler")
 
@@ -137,15 +138,20 @@ def _run_backup(app_config=None):
 
 
 def _scheduled_backup_job():
-    """Job function called by APScheduler — creates a scheduled backup."""
+    """Job function called by APScheduler — creates a scheduled backup, then prunes."""
     from config import Config
     app_config = {
         "MUDLIB_PATH": Config.MUDLIB_PATH,
         "SAVE_PATH": Config.SAVE_PATH,
         "LOG_PATH": Config.LOG_PATH,
         "BACKUP_PATH": Config.BACKUP_PATH,
+        "ADMIN_DATA_PATH": Config.ADMIN_DATA_PATH,
     }
     _run_backup(app_config)
+    try:
+        prune_backups(app_config)
+    except Exception:
+        pass
 
 
 def _extract_cron_info(job):
@@ -181,11 +187,15 @@ def scheduler_view():
     # Check if map needs regeneration
     needs_regen = _needs_regeneration(current_app.config)
 
+    data_path = current_app.config.get("ADMIN_DATA_PATH", "/admin-data")
+    retention = load_retention_settings(data_path)
+
     return render_template(
         "scheduler.html",
         schedule_info=schedule_info,
         backup_schedule_info=backup_schedule_info,
         needs_regen=needs_regen,
+        retention=retention,
     )
 
 
@@ -317,5 +327,47 @@ def run_backup_now():
         flash(f"Backup created: {filename}", "success")
     except Exception as e:
         flash(f"Backup failed: {e}", "error")
+        return redirect(url_for("scheduler.scheduler_view"))
 
+    try:
+        deleted = prune_backups(current_app.config)
+        if deleted:
+            flash(f"Pruned {len(deleted)} old backup(s).", "success")
+    except Exception as e:
+        flash(f"Pruning failed: {e}", "error")
+
+    return redirect(url_for("scheduler.scheduler_view"))
+
+
+@scheduler_bp.route("/set-retention", methods=["POST"])
+@login_required
+def set_retention():
+    try:
+        keep_daily = int(request.form.get("keep_daily", "7"))
+        keep_monthly = int(request.form.get("keep_monthly", "6"))
+        keep_yearly = int(request.form.get("keep_yearly", "3"))
+    except ValueError:
+        flash("Retention values must be integers.", "error")
+        return redirect(url_for("scheduler.scheduler_view"))
+
+    if any(v < 0 for v in (keep_daily, keep_monthly, keep_yearly)):
+        flash("Retention values cannot be negative.", "error")
+        return redirect(url_for("scheduler.scheduler_view"))
+
+    enabled = request.form.get("enabled") == "on"
+    prune_manual = request.form.get("prune_manual") == "on"
+    prune_imported = request.form.get("prune_imported") == "on"
+
+    settings = {
+        "enabled": enabled,
+        "keep_daily": keep_daily,
+        "keep_monthly": keep_monthly,
+        "keep_yearly": keep_yearly,
+        "prune_manual": prune_manual,
+        "prune_imported": prune_imported,
+    }
+
+    data_path = current_app.config.get("ADMIN_DATA_PATH", "/admin-data")
+    save_retention_settings(settings, data_path)
+    flash("Retention policy saved.", "success")
     return redirect(url_for("scheduler.scheduler_view"))

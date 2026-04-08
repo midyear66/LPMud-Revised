@@ -70,7 +70,8 @@ lpmud/
 │   ├── auth.py             #   Login, session mgmt, rate limiting
 │   ├── dashboard.py        #   Status overview page
 │   ├── backups.py          #   Backup create/list/download/restore/delete
-│   ├── scheduler.py        #   APScheduler cron UI for map regeneration
+│   ├── scheduler.py        #   APScheduler cron UI for map regen & backups
+│   ├── retention.py        #   Backup retention settings & pruning logic
 │   ├── mapviewer.py        #   Interactive Leaflet map viewer
 │   ├── players.py          #   Player save file viewer/editor
 │   ├── templates/          #   Jinja2 templates (base, login, dashboard, etc.)
@@ -242,7 +243,7 @@ docker compose -f docker/docker-compose.yml up -d admin
 | **Map** | Interactive world map viewer (Leaflet.js) — clickable rooms with popups showing exits (with destination name and region), region info, and file paths; room search; click-to-navigate exit links. Falls back to static PNG if JSON data is unavailable |
 | **Players** | Browse, create, edit, and delete player save files — stats, levels, inventory, flags. Live online/offline status badges poll every 10 seconds; editing is disabled while a player is online or stale to prevent save conflicts |
 | **Backups** | Create, download, restore, and delete tar.gz backups of mudlib, saves, or logs |
-| **Scheduler** | Set a daily schedule for automatic map regeneration, or run it on demand |
+| **Scheduler** | Daily schedules for automatic map regeneration and backups, backup retention policy (configurable daily/monthly/yearly limits with automatic pruning), and on-demand actions |
 
 ### Security
 
