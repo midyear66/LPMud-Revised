@@ -493,13 +493,15 @@ def discover_rooms(mudlib_path):
 
     # Assign bounding boxes for castle regions, stacked below existing regions
     castle_box_x = 120
-    castle_box_y = 2200
+    castle_box_y = 2170
     for region_key in castle_regions:
         n_rooms = sum(1 for _, (_, r) in castle_rooms.items()
                       if r == region_key)
         box_h = max(350, n_rooms * 120)
         REGION_BOXES[region_key] = (castle_box_x, castle_box_y, 1000, box_h)
         castle_box_y += box_h + 100
+
+    _validate_and_fix_boxes()
 
     return rooms, edges
 
@@ -554,23 +556,27 @@ def build_graph(rooms, edges):
 # Region bounding boxes: (x, y, w, h) in pixels — layout target areas
 # Sized proportionally to room count; arranged to match MUD geography
 REGION_BOXES = {
-    "special":      (120,   120,  900,  450),
-    "mines":        (120,   700,  1200, 1300),
-    "mountains":    (2800,  120,  2400, 800),
-    "plains":       (5400,  120,  1650, 800),
-    "giants":       (1500,  700,  1100, 700),
-    "orcs":         (1500,  1500, 1100, 700),
-    "forest":       (2800,  1050, 1600, 900),
-    "deep_forest":  (1500,  2300, 1600, 900),
-    "village":      (4550,  1050, 1800, 1000),
-    "east_road":    (5600,  2150, 1450, 800),
-    "sea":          (5600,  3050, 1450, 800),
-    "elevator":     (3300,  2050, 1000, 500),
-    "underground":  (4550,  2700, 2500, 900),
-    "south_forest": (1500,  3350, 1700, 650),
-    "shore":        (1500,  4100, 1700, 600),
-    "island":       (1500,  4800, 1700, 450),
-    "dragonlance":  (3400,  3350, 2000, 1500),
+    # Left column
+    "special":      (120,   120,   900,  450),
+    "mines":        (120,   720,  1200, 1300),
+    # Center-left column
+    "giants":       (1500,  120,  1100,  550),
+    "orcs":         (1500,  820,  1100,  700),
+    "deep_forest":  (1500, 1670,  1500,  800),
+    "south_forest": (1500, 2620,  1700, 1100),
+    "shore":        (1500, 3870,  1700,  700),
+    "island":       (1500, 4720,  1700,  550),
+    # Center-right column
+    "mountains":    (3350,  120,  1700,  600),
+    "forest":       (3350,  870,  1600,  650),
+    "elevator":     (3350, 1670,  1000,  400),
+    "dragonlance":  (3350, 2220,  1750, 1400),
+    # Right column
+    "plains":       (5250,  120,  1650,  700),
+    "village":      (5250,  970,  1650, 1000),
+    "east_road":    (5250, 2120,  1650,  600),
+    "underground":  (5250, 2870,  1650,  700),
+    "sea":          (5250, 3720,  1650,  550),
 }
 
 MARGIN = 120
@@ -801,6 +807,37 @@ def _local_spiral(target, occupied, prefer_dx=0, prefer_dy=0, max_radius=60):
         if best is not None:
             return best
     return (tx + max_radius, ty)
+
+
+def _validate_and_fix_boxes(min_gap=80):
+    """Check all REGION_BOXES pairs for overlap and nudge apart if needed."""
+    keys = list(REGION_BOXES.keys())
+    for _pass in range(10):
+        fixed = False
+        for i in range(len(keys)):
+            for j in range(i + 1, len(keys)):
+                k1, k2 = keys[i], keys[j]
+                x1, y1, w1, h1 = REGION_BOXES[k1]
+                x2, y2, w2, h2 = REGION_BOXES[k2]
+                overlap_x = (x1 + w1 + min_gap) - x2
+                overlap_y = (y1 + h1 + min_gap) - y2
+                overlap_x2 = (x2 + w2 + min_gap) - x1
+                overlap_y2 = (y2 + h2 + min_gap) - y1
+                if (overlap_x > 0 and overlap_x2 > 0 and
+                        overlap_y > 0 and overlap_y2 > 0):
+                    # Regions overlap — push the one further right/down
+                    if y2 >= y1:
+                        shift = (y1 + h1 + min_gap) - y2
+                        if shift > 0:
+                            REGION_BOXES[k2] = (x2, y2 + shift, w2, h2)
+                            fixed = True
+                    else:
+                        shift = (y2 + h2 + min_gap) - y1
+                        if shift > 0:
+                            REGION_BOXES[k1] = (x1, y1 + shift, w1, h1)
+                            fixed = True
+        if not fixed:
+            break
 
 
 def _resolve_overlaps(pixel_pos, G):

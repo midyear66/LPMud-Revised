@@ -36,14 +36,14 @@ int west() {
 }
 
 int close(string str) {
-    if (!str && str != "door")
+    if (!str || str != "door")
 	return 0;
     write("You can't.\n");
     return 1;
 }
 
 int open(string str) {
-    if (!str && str != "door")
+    if (!str || str != "door")
 	return 0;
     write("You can't.\n");
     return 1;

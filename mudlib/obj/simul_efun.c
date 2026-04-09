@@ -768,6 +768,8 @@ varargs string query_ip_number(object player)
 //---------------------------------------------------------------------------
 int query_idle(object ob)
 {
+    if (!interactive(ob))
+	return 0;
     return interactive_info(ob, II_IDLE);
 }
 

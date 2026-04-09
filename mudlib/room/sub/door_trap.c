@@ -22,7 +22,7 @@ int west_door_open;
 
 #undef EXTRA_INIT
 #define EXTRA_INIT\
-    add_action("open", "close");\
+    add_action("open", "open");\
     add_action("close", "close");
 
 TWO_EXIT("room/well", "east",
