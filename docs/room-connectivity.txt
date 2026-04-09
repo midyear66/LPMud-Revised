@@ -355,4 +355,4 @@ ROOM COUNT SUMMARY
   ISLE OF THE MAGI: 19 rooms
   PEACE'S CASTLE: 1 rooms
 
-  Total: 291 rooms
+  Total: 292 rooms
