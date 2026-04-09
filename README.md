@@ -25,7 +25,7 @@ This project builds on the work of many contributors to the LPmud ecosystem:
 - **Base image**: Debian bookworm-slim
 - **Mudlib**: LPmud 2.4.5 (ldmud's pre-ported [lp-245](https://github.com/ldmud/ldmud/tree/master/mud/lp-245))
 - **Compat mode**: Enabled (`--compat`) for 2.4.5 mudlib compatibility
-- **Port**: 4000 (telnet), 8080 (admin web interface)
+- **Port**: 4000 (telnet), 8080 (admin web interface with in-browser MUD client)
 - **Admin dashboard**: Flask + Gunicorn, runs as a separate Docker service
 - **Mudlib editing**: Mounted as a Docker volume for live editing during development
 - **Configuration**: `config/ldmud.conf` in ldmud `--args` format (one flag per line)
@@ -74,8 +74,9 @@ lpmud/
 │   ├── retention.py        #   Backup retention settings & pruning logic
 │   ├── mapviewer.py        #   Interactive Leaflet map viewer
 │   ├── players.py          #   Player save file viewer/editor
+│   ├── webclient.py        #   In-browser MUD client (WebSocket-to-telnet proxy)
 │   ├── templates/          #   Jinja2 templates (base, login, dashboard, etc.)
-│   └── static/             #   CSS (light/dark theme), JS (theme toggle, map)
+│   └── static/             #   CSS (light/dark theme), JS (theme toggle, map, terminal)
 ├── config/                 # ldmud runtime configuration
 │   └── ldmud.conf          #   --args format config file
 ├── docker/                 # Docker build files
@@ -241,11 +242,12 @@ docker compose -f docker/docker-compose.yml up -d admin
 
 | Page | Description |
 |------|-------------|
-| **Dashboard** | Server overview — room count, player count, backup status, scheduler status. Graceful shutdown with configurable countdown (1-15 min) warns players in-game before stopping |
+| **Dashboard** | Server overview — room count, player count, backup status, scheduler status. Graceful shutdown with configurable countdown (1-15 min) warns players in-game before stopping. "Play MUD" button opens an in-browser terminal client |
 | **Map** | Interactive world map viewer (Leaflet.js) — clickable rooms with popups showing exits (with destination name and region), region info, and file paths; room search; click-to-navigate exit links. Falls back to static PNG if JSON data is unavailable |
 | **Players** | Browse, create, edit, and delete player save files — stats, levels, inventory, flags. Live online/offline status badges poll every 10 seconds; editing is disabled while a player is online or stale to prevent save conflicts |
 | **Backups** | Create, download, restore, and delete tar.gz backups of mudlib, saves, or logs |
 | **Scheduler** | Daily schedules for automatic map regeneration and backups, backup retention policy (configurable daily/monthly/yearly limits with automatic pruning), and on-demand actions |
+| **Play MUD** | In-browser MUD client using xterm.js — opens in a popup window from the dashboard. WebSocket-to-telnet proxy handles connection, ANSI colors, telnet ECHO negotiation (password hiding), command history (up/down arrows), and 30-second keepalive pings. No separate telnet client needed |
 
 ### Security
 

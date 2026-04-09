@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LPMud-Revised</title>
+  <link rel="stylesheet" href="https://unpkg.com/@xterm/xterm@5.5.0/css/xterm.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: #1a1a2e; }
+    #terminal { width: 100%; height: 100%; }
+    .reconnect-overlay {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #16213e;
+      border: 1px solid #0f3460;
+      border-radius: 6px;
+      padding: 12px 24px;
+      align-items: center;
+      gap: 12px;
+      z-index: 10000;
+    }
+    .reconnect-overlay.visible { display: flex; }
+    .reconnect-overlay span { color: #ef4444; font-size: 13px; font-family: 'Courier New', monospace; }
+    .reconnect-overlay button {
+      background: #533483;
+      color: #fff;
+      border: none;
+      padding: 6px 18px;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      border-radius: 3px;
+    }
+    .reconnect-overlay button:hover { background: #6d44a8; }
+  </style>
+</head>
+<body>
+  <div id="terminal"></div>
+  <div id="reconnect" class="reconnect-overlay">
+    <span id="reconnect-text">Disconnected</span>
+    <button id="reconnect-btn">Reconnect</button>
+  </div>
+
+  <script src="https://unpkg.com/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+  <script src="https://unpkg.com/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+  <script src="{{ url_for('static', filename='js/webclient.js') }}"></script>
+</body>
+</html>

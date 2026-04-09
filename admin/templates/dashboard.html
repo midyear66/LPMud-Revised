@@ -105,6 +105,8 @@
 <div class="card" style="margin-top: 1.5rem;">
   <div class="card-header">Quick Actions</div>
   <div class="btn-group">
+    <button type="button" class="btn btn-primary"
+            data-popup="{{ url_for('webclient.client_view') }}">Play MUD</button>
     <a href="{{ url_for('map.map_view') }}" class="btn">View Map</a>
     <a href="{{ url_for('players.players_list') }}" class="btn">Player Editor</a>
     <a href="{{ url_for('backups.backups_list') }}" class="btn">Manage Backups</a>

@@ -29,6 +29,7 @@ def create_app():
     from mapviewer import map_bp
     from server import server_bp
     from players import players_bp
+    from webclient import webclient_bp, sock
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -37,6 +38,10 @@ def create_app():
     app.register_blueprint(map_bp)
     app.register_blueprint(server_bp)
     app.register_blueprint(players_bp)
+    app.register_blueprint(webclient_bp)
+
+    sock.init_app(app)
+    csrf.exempt(webclient_bp)
 
     # Initialize APScheduler
     init_scheduler(app)
@@ -63,7 +68,8 @@ def create_app():
             "default-src 'self'; "
             "script-src 'self' https://unpkg.com; "
             "style-src 'self' 'unsafe-inline' https://unpkg.com; "
-            "img-src 'self' data:"
+            "img-src 'self' data:; "
+            "connect-src 'self'"
         )
         # Prevent caching of authenticated pages
         if session.get("logged_in"):

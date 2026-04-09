@@ -6,3 +6,4 @@ sqlalchemy==2.0.36
 Pillow==11.1.0
 networkx==3.4.2
 docker==7.1.0
+flask-sock==0.7.0
