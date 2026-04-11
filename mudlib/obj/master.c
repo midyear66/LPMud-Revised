@@ -22,6 +22,7 @@
 #include "/sys/functionlist.h"
 #include "/sys/erq.h"
 #include "/sys/object_info.h"
+#include "/sys/driver_info.h"
 
 #define INIT_FILE "/room/init_file"
 #define BACKBONE_WIZINFO_SIZE 5
@@ -438,7 +439,6 @@ void inaugurate_master (int arg)
         if (previous_object() && previous_object() != this_object())
             return;
         set_extra_wizinfo(0, allocate(BACKBONE_WIZINFO_SIZE));
-        boot_time = time();
     }
 
     mudwho_init(arg);
@@ -571,9 +571,7 @@ void flag (string arg)
 }
 
 //---------------------------------------------------------------------------
-static int boot_time;
-
-int query_boot_time() { return boot_time; }
+int query_boot_time() { return driver_info(DI_BOOT_TIME); }
 
 //---------------------------------------------------------------------------
 static mixed current_time;
