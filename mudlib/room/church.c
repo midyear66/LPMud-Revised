@@ -1,6 +1,6 @@
 #include "std.h"
 
-int lamp_is_lit, reboot_time, time_from_reset, last_reset_cycle;
+int lamp_is_lit, time_from_reset, last_reset_cycle;
 int list_length;
 
 void reset(string arg)
@@ -11,7 +11,6 @@ void reset(string arg)
     if (arg)
 	return;
     set_light(1);
-    reboot_time = time();
 }
 
 void init()
@@ -36,7 +35,7 @@ void long(string str)
     if (str == "clock") {
 	int i, j;
 	write("The clock shows ");
-	i = time() - reboot_time;
+	i = time() - "obj/master"->query_boot_time();
 	j = i / 60 / 60 / 24;
 	if (j == 1)
 	    write("1 day ");

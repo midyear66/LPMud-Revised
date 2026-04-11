@@ -438,6 +438,7 @@ void inaugurate_master (int arg)
         if (previous_object() && previous_object() != this_object())
             return;
         set_extra_wizinfo(0, allocate(BACKBONE_WIZINFO_SIZE));
+        boot_time = time();
     }
 
     mudwho_init(arg);
@@ -568,6 +569,11 @@ void flag (string arg)
   }
   write("master: Unknown flag "+arg+"\n");
 }
+
+//---------------------------------------------------------------------------
+static int boot_time;
+
+int query_boot_time() { return boot_time; }
 
 //---------------------------------------------------------------------------
 static mixed current_time;
