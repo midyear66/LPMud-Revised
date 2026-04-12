@@ -702,10 +702,17 @@ int communicate(string str) {
     return 1;
 }
 
+static int keepalive_counter;
+
 static void heart_beat() {
     if (ghost)
         return;
     age += 1;
+    keepalive_counter++;
+    if (keepalive_counter >= 60) {
+        keepalive_counter = 0;
+        binary_message(({0xFF, 0xF1}), 1);
+    }
     if (age > time_to_save) {
         if (!brief)
             write("Autosave.\n");
