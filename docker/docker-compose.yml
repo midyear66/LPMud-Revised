@@ -4,8 +4,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     container_name: lpmud-server
-    ports:
-      - "4000:4000"
+    network_mode: host
     volumes:
       # Mount mudlib for live editing (optional — remove for production)
       - ../mudlib:/mud/lib
@@ -39,10 +38,12 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
       - SECRET_KEY=${SECRET_KEY:?Set SECRET_KEY in .env}
       - LPMUD_CONTAINER_NAME=lpmud-server
-      - MUD_HOST=${MUD_HOST:-lpmud-server}
+      - MUD_HOST=${MUD_HOST:-host.docker.internal}
       - MUD_PORT=${MUD_PORT:-4000}
     group_add:
       - "${DOCKER_GID:-0}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
