@@ -15,6 +15,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from auth import login_required
+from retention import classify_backups
 
 backups_bp = Blueprint("backups", __name__, url_prefix="/backups")
 
@@ -77,6 +78,9 @@ def _list_backups() -> list[dict]:
 @login_required
 def backups_list():
     backups = _list_backups()
+    tiers = classify_backups(current_app.config)
+    for b in backups:
+        b["retention"] = tiers.get(b["name"], "")
     return render_template("backups.html", backups=backups)
 
 

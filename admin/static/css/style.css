@@ -19,6 +19,8 @@
   --flash-warning-fg: #92400e;
   --flash-success-bg: #f0fdf4;
   --flash-success-fg: #166534;
+  --flash-yearly-bg: #e8d5f5;
+  --flash-yearly-fg: #6b21a8;
   --shadow: 0 1px 3px rgba(0,0,0,0.08);
   --shadow-lg: 0 4px 12px rgba(0,0,0,0.1);
 }
@@ -40,6 +42,8 @@
   --flash-warning-fg: #fcd34d;
   --flash-success-bg: #1a2e1a;
   --flash-success-fg: #86efac;
+  --flash-yearly-bg: #2d1a3e;
+  --flash-yearly-fg: #d8b4fe;
   --shadow: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-lg: 0 4px 12px rgba(0,0,0,0.4);
 }
@@ -598,6 +602,12 @@ input:focus, select:focus {
 .badge-warning { background: var(--flash-warning-bg); color: var(--flash-warning-fg); }
 .badge-info    { background: var(--flash-info-bg);     color: var(--flash-info-fg); }
 .badge-error   { background: var(--flash-error-bg);    color: var(--flash-error-fg); }
+
+.badge-daily   { background: var(--flash-success-bg); color: var(--flash-success-fg); }
+.badge-weekly  { background: var(--flash-info-bg);    color: var(--flash-info-fg); }
+.badge-monthly { background: var(--flash-warning-bg); color: var(--flash-warning-fg); }
+.badge-yearly  { background: var(--flash-yearly-bg);  color: var(--flash-yearly-fg); }
+.badge-expires { background: var(--flash-error-bg);   color: var(--flash-error-fg); }
 
 /* ===== Empty State ===== */
 .empty-state {

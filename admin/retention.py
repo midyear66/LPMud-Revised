@@ -50,6 +50,89 @@ def save_retention_settings(settings, data_path):
     os.replace(tmp, path)
 
 
+def classify_backups(app_config):
+    """Classify backups by retention tier. Returns dict of filename -> tier label."""
+    data_path = app_config.get("ADMIN_DATA_PATH", "/admin-data")
+    settings = load_retention_settings(data_path)
+
+    if not settings.get("enabled", True):
+        return {}
+
+    backup_dir = app_config.get("BACKUP_PATH", "/backups")
+    if not os.path.isdir(backup_dir):
+        return {}
+
+    keep_daily = max(0, int(settings.get("keep_daily", 7)))
+    keep_weekly = max(0, int(settings.get("keep_weekly", 4)))
+    keep_monthly = max(0, int(settings.get("keep_monthly", 6)))
+    keep_yearly = max(0, int(settings.get("keep_yearly", 3)))
+    prune_manual = settings.get("prune_manual", False)
+    prune_imported = settings.get("prune_imported", False)
+
+    # Parse and filter backup files
+    candidates = []
+    for filepath in glob.glob(os.path.join(backup_dir, "*.tar.gz")):
+        name = os.path.basename(filepath)
+        m = _BACKUP_RE.match(name)
+        if not m:
+            continue
+        prefix, date_str, time_str = m.group(1), m.group(2), m.group(3)
+
+        if prefix == "full" and not prune_manual:
+            continue
+        if prefix == "imported" and not prune_imported:
+            continue
+
+        try:
+            ts = datetime.strptime(date_str + time_str, "%Y%m%d%H%M%S")
+        except ValueError:
+            continue
+
+        candidates.append((ts, name))
+
+    candidates.sort(key=lambda x: x[0], reverse=True)
+
+    # Greedy tier assignment (same logic as prune_backups)
+    tiers = {}
+    daily_count = 0
+    weekly_seen = set()
+    weekly_count = 0
+    monthly_seen = set()
+    monthly_count = 0
+    yearly_seen = set()
+    yearly_count = 0
+
+    for ts, name in candidates:
+        if daily_count < keep_daily:
+            tiers[name] = "daily"
+            daily_count += 1
+            continue
+
+        yw = ts.isocalendar()[:2]
+        if yw not in weekly_seen and weekly_count < keep_weekly:
+            tiers[name] = "weekly"
+            weekly_seen.add(yw)
+            weekly_count += 1
+            continue
+
+        ym = (ts.year, ts.month)
+        if ym not in monthly_seen and monthly_count < keep_monthly:
+            tiers[name] = "monthly"
+            monthly_seen.add(ym)
+            monthly_count += 1
+            continue
+
+        if ts.year not in yearly_seen and yearly_count < keep_yearly:
+            tiers[name] = "yearly"
+            yearly_seen.add(ts.year)
+            yearly_count += 1
+            continue
+
+        tiers[name] = "expires"
+
+    return tiers
+
+
 def prune_backups(app_config):
     """Delete backups that exceed the retention policy. Returns list of deleted filenames."""
     data_path = app_config.get("ADMIN_DATA_PATH", "/admin-data")
