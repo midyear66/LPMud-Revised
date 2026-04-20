@@ -55,4 +55,7 @@ USER mud
 
 EXPOSE 4000
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD bash -c 'echo > /dev/tcp/localhost/4000' || exit 1
+
 CMD ["ldmud", "--args", "/mud/ldmud.conf"]

@@ -29,6 +29,7 @@ This project builds on the work of many contributors to the LPmud ecosystem:
 - **Admin dashboard**: Flask + Gunicorn, runs as a separate Docker service
 - **Mudlib editing**: Mounted as a Docker volume for live editing during development
 - **Configuration**: `config/ldmud.conf` in ldmud `--args` format (one flag per line)
+- **Health checks**: Both containers define Docker `HEALTHCHECK` directives (TCP probe on 4000, HTTP probe on 8080)
 - **Security**: Both containers run as non-root users
 
 ## Prerequisites
